@@ -57,6 +57,30 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
 
+  // Sync collapsed state with localStorage on client mount
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sidebar_collapsed");
+      if (saved !== null) {
+        setCollapsed(saved === "true");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleToggleCollapse = (targetState?: boolean) => {
+    setCollapsed((prev) => {
+      const next = typeof targetState === "boolean" ? targetState : !prev;
+      try {
+        localStorage.setItem("sidebar_collapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   const { activeRole, activeUserName, setActiveRole, canAccess } = useHydratedRole();
   const { t } = useHydratedLanguage();
   const { shopInfo, setShopInfo } = useHydratedOrganization();
@@ -138,45 +162,68 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
       {/* Desktop Collapsible Sidebar */}
       <aside
         className={cn(
-          "hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-200 shrink-0 sticky top-0 h-screen",
+          "hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-200 shrink-0 sticky top-0 h-screen relative",
           collapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Brand */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100">
-          {!collapsed && (
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-rose-600 flex items-center justify-center text-white font-bold text-sm tracking-tight shadow-xs">
-                MS
+        {/* Floating border rail toggle - always easily clickable from anywhere */}
+        <button
+          type="button"
+          onClick={() => handleToggleCollapse()}
+          className="hidden md:flex absolute -right-3 top-20 z-30 w-6 h-6 bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-300 rounded-full shadow-sm items-center justify-center transition-all hover:scale-110 cursor-pointer"
+          title={collapsed ? "সাইডবার প্রসারিত করুন (Expand sidebar)" : "সাইডবার সংকুচিত করুন (Collapse sidebar)"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-3.5 h-3.5" />
+          ) : (
+            <ChevronLeft className="w-3.5 h-3.5" />
+          )}
+        </button>
+
+        {/* Brand & Sidebar Toggle */}
+        <div className="h-16 flex items-center justify-between px-3 border-b border-slate-100">
+          {!collapsed ? (
+            <>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-md bg-rose-600 flex items-center justify-center text-white font-bold text-sm tracking-tight shadow-xs shrink-0">
+                  MS
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span
+                    className="font-bold text-slate-900 text-sm leading-tight truncate max-w-[140px]"
+                    suppressHydrationWarning
+                  >
+                    {shopName || t("shopTitle")}
+                  </span>
+                  <span className="text-[11px] text-slate-400 truncate" suppressHydrationWarning>
+                    {t("tagline")}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span
-                  className="font-bold text-slate-900 text-sm leading-tight truncate max-w-[150px]"
-                  suppressHydrationWarning
-                >
-                  {shopName || t("shopTitle")}
-                </span>
-                <span className="text-[11px] text-slate-400" suppressHydrationWarning>
-                  {t("tagline")}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleCollapse(true)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0"
+                title="সাইডবার সংকুচিত করুন (Collapse sidebar)"
+                aria-label="Collapse sidebar"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <div className="w-full flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => handleToggleCollapse(false)}
+                className="w-10 h-10 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 flex items-center justify-center transition-all shadow-xs group"
+                title="সাইডবার প্রসারিত করুন / Expand sidebar"
+                aria-label="Expand sidebar"
+              >
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
             </div>
           )}
-          {collapsed && (
-            <div className="w-8 h-8 mx-auto rounded-md bg-rose-600 flex items-center justify-center text-white font-bold text-sm">
-              MS
-            </div>
-          )}
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className={cn(
-              "text-slate-400 hover:text-slate-600 p-1 rounded-sm hover:bg-slate-100 transition-colors",
-              collapsed && "hidden"
-            )}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Language Switcher in Sidebar */}
@@ -254,9 +301,11 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                 <LogOut className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setCollapsed(false)}
-                className="w-full flex justify-center text-slate-400 hover:text-slate-600 py-1"
-                title="Expand"
+                type="button"
+                onClick={() => handleToggleCollapse(false)}
+                className="w-full flex justify-center text-slate-400 hover:text-rose-600 py-1 transition-colors"
+                title="সাইডবার প্রসারিত করুন / Expand sidebar"
+                aria-label="Expand sidebar"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
