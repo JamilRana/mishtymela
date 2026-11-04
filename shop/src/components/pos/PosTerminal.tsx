@@ -21,6 +21,7 @@ import {
 import { useCartStore } from "@/stores/cart";
 import { useLanguageStore } from "@/stores/language";
 import { formatMoney } from "@/components/shared/MoneyText";
+import { toBnDigits } from "@/lib/bangla-numbers";
 import { PosReceiptModal, type ReceiptData } from "./PosReceiptModal";
 import { createSaleAction } from "@/actions/sales";
 import { cn } from "@/lib/utils";
@@ -501,7 +502,9 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                             : "bg-slate-100 text-slate-600"
                         )}
                       >
-                        {isOutOfStock ? "Out" : `${p.stockQty} in stock`}
+                        {isOutOfStock
+                          ? language === "bn" ? "স্টক নেই" : "Out"
+                          : language === "bn" ? `${toBnDigits(p.stockQty)} স্টকে` : `${p.stockQty} in stock`}
                       </span>
                     </div>
                   </button>
@@ -600,9 +603,11 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs font-semibold text-slate-900 truncate">{item.name}</h4>
                   <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                    <span>{formatMoney(item.unitPrice)}</span>
+                    <span>{formatMoney(item.unitPrice, language)}</span>
                     <span>×</span>
-                    <span className="font-semibold text-slate-800">{item.quantity}</span>
+                    <span className="font-semibold text-slate-800">
+                      {language === "bn" ? toBnDigits(item.quantity) : item.quantity}
+                    </span>
                   </div>
                 </div>
 
@@ -617,7 +622,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                     <Minus className="w-3.5 h-3.5" />
                   </button>
                   <span className="w-7 text-center text-xs font-semibold text-slate-900 tabular-nums">
-                    {item.quantity}
+                    {language === "bn" ? toBnDigits(item.quantity) : item.quantity}
                   </span>
                   <button
                     type="button"

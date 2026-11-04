@@ -19,11 +19,12 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { MoneyText, formatMoney } from "@/components/shared/MoneyText";
-import { DateTimeText } from "@/components/shared/DateTimeText";
+import { DateTimeText, formatDhakaDate } from "@/components/shared/DateTimeText";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Pagination } from "@/components/shared/Pagination";
 import { recordSalePaymentAction, voidSaleAction, updateSaleAction } from "@/actions/sales";
+import { toBnDigits } from "@/lib/bangla-numbers";
 import { useLanguageStore } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { cn } from "@/lib/utils";
@@ -113,9 +114,8 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
   const [statusFilter, setStatusFilter] = useState(currentStatus);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
 
-  // Invoice Display & Language Options
-  const [invoiceLang, setInvoiceLang] = useState<"bn" | "en">(language);
-  const [invoiceFormat, setInvoiceFormat] = useState<"a4" | "thermal">("a4");
+  // Invoice Display & Language Options (Default is Bangla and Thermal)
+  const [invoiceLang, setInvoiceLang] = useState<"bn" | "en">("bn");
 
   // Admin Invoice Editing State
   const [isEditingInvoice, setIsEditingInvoice] = useState(false);
@@ -362,25 +362,27 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                   className="hover:bg-slate-50/70 transition-colors cursor-pointer"
                 >
                   <td className="py-3 px-4 font-mono font-bold text-blue-600">
-                    {s.invoiceNo}
+                    {language === "bn" ? toBnDigits(s.invoiceNo) : s.invoiceNo}
                   </td>
                   <td className="py-3 px-4">
-                    <DateTimeText date={s.createdAt} />
+                    <DateTimeText date={s.createdAt} lang={language} />
                   </td>
                   <td className="py-3 px-4 font-medium text-slate-800">
                     {s.customerName}
                   </td>
                   <td className="py-3 px-4 text-right font-bold text-slate-900">
-                    <MoneyText amount={s.total} />
+                    <MoneyText amount={s.total} lang={language} />
                   </td>
                   <td className="py-3 px-4 text-right font-semibold text-slate-700">
-                    <MoneyText amount={s.paid} />
+                    <MoneyText amount={s.paid} lang={language} />
                   </td>
                   <td className="py-3 px-4 text-right font-bold">
                     {s.due > 0 ? (
-                      <MoneyText amount={s.due} className="text-amber-600" />
+                      <MoneyText amount={s.due} className="text-amber-600" lang={language} />
                     ) : (
-                      <span className="text-slate-400 font-normal">৳0.00</span>
+                      <span className="text-slate-400 font-normal">
+                        {language === "bn" ? "৳ ০.০০" : "৳ 0.00"}
+                      </span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-center">
@@ -459,13 +461,13 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </Dialog.Close>
               </div>
 
-              {/* Admin Toolbar: Language, Format, and Edit Controls (Hidden when printing) */}
+              {/* Admin Toolbar: Language and Edit Controls (Hidden when printing) */}
               <div className="my-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs print:hidden space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  {/* Language Switcher */}
+                  {/* Language Switcher (Bangla default) */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[11px] font-semibold text-slate-500">
-                      {invoiceLang === "bn" ? "ভাষা:" : "Language:"}
+                      {invoiceLang === "bn" ? "রসিদের ভাষা:" : "Receipt Language:"}
                     </span>
                     <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-white">
                       <button
@@ -478,7 +480,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                             : "text-slate-600 hover:text-slate-900"
                         )}
                       >
-                        বাংলা (BN)
+                        বাংলা (ডিফল্ট)
                       </button>
                       <button
                         type="button"
@@ -490,40 +492,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                             : "text-slate-600 hover:text-slate-900"
                         )}
                       >
-                        English (EN)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Format Selector */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-slate-500">
-                      {invoiceLang === "bn" ? "ফরম্যাট:" : "Format:"}
-                    </span>
-                    <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-white">
-                      <button
-                        type="button"
-                        onClick={() => setInvoiceFormat("a4")}
-                        className={cn(
-                          "px-2.5 py-1 text-xs font-semibold rounded transition-colors",
-                          invoiceFormat === "a4"
-                            ? "bg-slate-900 text-white shadow-2xs font-bold"
-                            : "text-slate-600 hover:text-slate-900"
-                        )}
-                      >
-                        A4 / Standard
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInvoiceFormat("thermal")}
-                        className={cn(
-                          "px-2.5 py-1 text-xs font-semibold rounded transition-colors",
-                          invoiceFormat === "thermal"
-                            ? "bg-slate-900 text-white shadow-2xs font-bold"
-                            : "text-slate-600 hover:text-slate-900"
-                        )}
-                      >
-                        Thermal (80mm)
+                        English
                       </button>
                     </div>
                   </div>
@@ -655,156 +624,98 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </form>
               )}
 
-              {/* Printable Invoice Container (Safe Margins & Clean Print Styling) */}
+              {/* Printable Thermal Receipt Paper Container */}
               <div
                 id="invoice-printable"
-                className={cn(
-                  "my-3 p-6 bg-white border border-slate-200 rounded text-slate-800 text-xs box-border",
-                  invoiceFormat === "thermal" && "thermal-mode max-w-[78mm] mx-auto p-3 font-mono text-[11px]"
-                )}
+                className="my-3 max-w-[78mm] mx-auto p-4 bg-white border border-dashed border-slate-300 rounded text-slate-900 font-mono text-xs select-text box-border"
               >
                 {/* Shop Official Branding Header */}
-                <div className="text-center pb-3 border-b border-dashed border-slate-300">
-                  <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
+                <div className="text-center pb-2 border-b border-dashed border-slate-300">
+                  <h2 className="font-bold text-sm text-slate-900 uppercase">
                     {activeShop.name}
                   </h2>
                   {activeShop.address && (
-                    <p className="text-xs text-slate-600 mt-0.5 max-w-md mx-auto">{activeShop.address}</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">{activeShop.address}</p>
                   )}
-                  <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-xs text-slate-500 font-mono mt-1">
-                    {activeShop.phone && (
-                      <span>{invoiceLang === "bn" ? "মোবাইল: " : "Phone: "}{activeShop.phone}</span>
-                    )}
-                    {activeShop.vatNumber && (
-                      <span>• {activeShop.vatNumber}</span>
-                    )}
-                  </div>
-                  <div className="mt-2 inline-block px-3 py-0.5 bg-slate-100 border border-slate-200 rounded font-bold text-[11px] text-slate-800 uppercase tracking-wider">
-                    {invoiceLang === "bn" ? "ক্যাশ মেমো / ইনভয়েস" : "CASH MEMO / INVOICE"}
-                  </div>
-                </div>
-
-                {/* Metadata Row */}
-                <div className="my-3 flex justify-between items-start text-xs border-b border-slate-100 pb-2.5">
-                  <div className="space-y-0.5">
-                    <div className="text-[10px] uppercase font-semibold text-slate-400">
-                      {invoiceLang === "bn" ? "ইনভয়েস নম্বর" : "Invoice No"}
-                    </div>
-                    <div className="font-mono font-bold text-blue-700 text-sm">{selectedSale.invoiceNo}</div>
-                    <div className="text-slate-700 pt-1">
-                      <span className="text-slate-500">{invoiceLang === "bn" ? "ক্রেতা:" : "Customer:"} </span>
-                      <span className="font-bold text-slate-900">
-                        {selectedSale.customerName || (invoiceLang === "bn" ? "খুচরা ক্রেতা" : "Walk-in Customer")}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right space-y-0.5">
-                    <div className="text-[10px] uppercase font-semibold text-slate-400">
-                      {invoiceLang === "bn" ? "তারিখ ও সময়" : "Date & Time"}
-                    </div>
-                    <div className="font-mono text-slate-800">
-                      <DateTimeText date={selectedSale.createdAt} />
-                    </div>
-                    <div className="pt-1">
-                      {selectedSale.status === "VOID" ? (
-                        <StatusBadge type="void" />
-                      ) : selectedSale.due > 0 ? (
-                        <StatusBadge type="due" />
-                      ) : (
-                        <StatusBadge type="completed" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Void Alert Banner */}
-                {selectedSale.status === "VOID" && (
-                  <div className="my-3 p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center gap-2">
-                    <Ban className="w-4 h-4 text-rose-500 shrink-0" />
-                    <span>
-                      {invoiceLang === "bn"
-                        ? "এই বিক্রয়টি বাতিল করা হয়েছে। মালামাল পুনরায় স্টকে ফেরত গেছে।"
-                        : "This sale was VOIDED. Stock was restored back to inventory."}
+                  {activeShop.phone && (
+                    <p className="text-[10px] text-slate-600 font-mono">
+                      {invoiceLang === "bn" ? "মোবাইল: " : "Phone: "}
+                      {invoiceLang === "bn" ? toBnDigits(activeShop.phone) : activeShop.phone}
+                    </p>
+                  )}
+                  {activeShop.vatNumber && (
+                    <p className="text-[9px] text-slate-400 font-mono">
+                      {invoiceLang === "bn" ? toBnDigits(activeShop.vatNumber) : activeShop.vatNumber}
+                    </p>
+                  )}
+                  <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-[10px] text-slate-600">
+                    <span className="font-semibold font-mono">
+                      {invoiceLang === "bn" ? toBnDigits(selectedSale.invoiceNo) : selectedSale.invoiceNo}
                     </span>
+                    <span>{formatDhakaDate(selectedSale.createdAt, true, invoiceLang)}</span>
                   </div>
-                )}
-
-                {/* Line Items Table */}
-                <div className="my-3">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-300 text-slate-600 text-[10px] uppercase font-bold">
-                        <th className="py-2 text-left">{invoiceLang === "bn" ? "আইটেম / পণ্যের নাম" : "Item Description"}</th>
-                        <th className="py-2 text-center">{invoiceLang === "bn" ? "পরিমাণ" : "Qty"}</th>
-                        <th className="py-2 text-right">{invoiceLang === "bn" ? "দর (৳)" : "Rate (৳)"}</th>
-                        <th className="py-2 text-right">{invoiceLang === "bn" ? "মোট (৳)" : "Total (৳)"}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedSale.items.map((it) => (
-                        <tr key={it.id}>
-                          <td className="py-2 font-medium text-slate-900">{it.productName}</td>
-                          <td className="py-2 text-center font-mono font-medium">{it.quantity}</td>
-                          <td className="py-2 text-right font-mono text-slate-600">
-                            {formatMoney(it.unitPrice)}
-                          </td>
-                          <td className="py-2 text-right font-bold text-slate-900 font-mono">
-                            {formatMoney(it.lineTotal)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
 
-                {/* Totals Summary */}
-                <div className="bg-slate-50 p-3 rounded border border-slate-200 text-xs space-y-1.5 mt-3">
+                {/* Customer Info if applicable */}
+                <div className="py-1 text-[11px] border-b border-dashed border-slate-300 flex justify-between">
+                  <span className="text-slate-500">{invoiceLang === "bn" ? "ক্রেতার নাম:" : "Customer:"}</span>
+                  <span className="font-semibold">
+                    {selectedSale.customerName || (invoiceLang === "bn" ? "খুচরা ক্রেতা" : "Walk-in Customer")}
+                  </span>
+                </div>
+
+                {/* Line Items */}
+                <div className="py-2 border-b border-dashed border-slate-300 space-y-1">
+                  <div className="flex justify-between font-bold text-[10px] text-slate-500 uppercase">
+                    <span>{invoiceLang === "bn" ? "আইটেম" : "Item"}</span>
+                    <span>{invoiceLang === "bn" ? "পরিমাণ x দর" : "Qty x Rate"}</span>
+                    <span>{invoiceLang === "bn" ? "মোট" : "Total"}</span>
+                  </div>
+                  {selectedSale.items.map((it) => (
+                    <div key={it.id} className="flex justify-between items-baseline text-[11px]">
+                      <div className="truncate max-w-[130px] font-sans">
+                        {it.productName}
+                      </div>
+                      <div className="text-[10px] text-slate-600 font-mono">
+                        {invoiceLang === "bn" ? toBnDigits(it.quantity) : it.quantity} x {formatMoney(it.unitPrice, invoiceLang)}
+                      </div>
+                      <div className="font-semibold font-mono">{formatMoney(it.lineTotal, invoiceLang)}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calculation Breakdown */}
+                <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5 text-[11px]">
                   <div className="flex justify-between text-slate-600">
                     <span>{invoiceLang === "bn" ? "উপমোট (সাবটোটাল):" : "Subtotal:"}</span>
-                    <span className="font-mono font-medium">{formatMoney(selectedSale.subtotal)}</span>
+                    <span className="font-mono">{formatMoney(selectedSale.subtotal, invoiceLang)}</span>
                   </div>
                   {selectedSale.discount > 0 && (
                     <div className="flex justify-between text-emerald-700 font-medium">
                       <span>{invoiceLang === "bn" ? "মূল্যছাড় (-):" : "Discount (-):"}</span>
-                      <span className="font-mono">-{formatMoney(selectedSale.discount)}</span>
+                      <span className="font-mono">-{formatMoney(selectedSale.discount, invoiceLang)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-sm text-slate-900 pt-1.5 border-t border-slate-200">
-                    <span>{invoiceLang === "bn" ? "সর্বমোট প্রদেয় বিল:" : "Grand Total:"}</span>
-                    <span className="font-mono text-blue-700">{formatMoney(selectedSale.total)}</span>
+                  <div className="flex justify-between font-bold text-slate-900 text-xs pt-1 border-t border-slate-200">
+                    <span>{invoiceLang === "bn" ? "সর্বমোট বিল:" : "Total Amount:"}</span>
+                    <span className="font-mono font-bold text-slate-900">{formatMoney(selectedSale.total, invoiceLang)}</span>
                   </div>
                   <div className="flex justify-between text-slate-700">
-                    <span>{invoiceLang === "bn" ? "পরিশোধিত টাকা:" : "Paid Amount:"}</span>
-                    <span className="font-mono font-semibold text-emerald-700">{formatMoney(selectedSale.paid)}</span>
+                    <span>{invoiceLang === "bn" ? "পরিশোধিত টাকা:" : "Paid:"}</span>
+                    <span className="font-mono font-semibold">{formatMoney(selectedSale.paid, invoiceLang)}</span>
                   </div>
                   {selectedSale.due > 0 && (
-                    <div className="flex justify-between text-amber-700 font-bold">
+                    <div className="flex justify-between font-bold text-amber-700">
                       <span>{invoiceLang === "bn" ? "বাকি টাকা:" : "Due Balance:"}</span>
-                      <span className="font-mono">{formatMoney(selectedSale.due)}</span>
+                      <span className="font-mono">{formatMoney(selectedSale.due, invoiceLang)}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Receipt Footer Message */}
-                {activeShop.receiptFooter && (
-                  <div className="mt-4 pt-3 border-t border-dashed border-slate-300 text-center text-xs text-slate-500 font-medium italic">
-                    {activeShop.receiptFooter}
-                  </div>
-                )}
-
-                {/* Standard A4 Signature Block (Only visible on standard A4 layout during print) */}
-                {invoiceFormat === "a4" && (
-                  <div className="mt-10 pt-4 hidden print:flex justify-between items-end text-xs text-slate-600">
-                    <div className="text-center">
-                      <div className="w-36 border-t border-slate-400 mb-1" />
-                      <span>{invoiceLang === "bn" ? "ক্রেতার স্বাক্ষর" : "Customer Signature"}</span>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-36 border-t border-slate-400 mb-1" />
-                      <span>{invoiceLang === "bn" ? "কর্তৃপক্ষের স্বাক্ষর" : "Authorized Signature"}</span>
-                    </div>
-                  </div>
-                )}
+                <div className="pt-2 text-center text-[10px] text-slate-500">
+                  <p>{activeShop.receiptFooter || "স্বাদে ও ঐতিহ্যে অনন্য • ধন্যবাদ আবার আসবেন!"}</p>
+                </div>
               </div>
 
               {/* Actions Footer (Hidden when printing) */}
@@ -828,7 +739,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                     className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold shadow-xs transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    <span>{invoiceLang === "bn" ? "ইনভয়েস প্রিন্ট করুন" : "Print Invoice"}</span>
+                    <span>{invoiceLang === "bn" ? "রশিদ প্রিন্ট (Thermal)" : "Print Thermal Receipt"}</span>
                   </button>
 
                   {selectedSale.status === "COMPLETED" && selectedSale.due > 0 && (

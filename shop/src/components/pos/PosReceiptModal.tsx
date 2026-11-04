@@ -5,6 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Printer, Download, Plus, CheckCircle, X } from "lucide-react";
 import { formatMoney } from "@/components/shared/MoneyText";
 import { formatDhakaDate } from "@/components/shared/DateTimeText";
+import { toBnDigits } from "@/lib/bangla-numbers";
 import { useLanguageStore } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { cn } from "@/lib/utils";
@@ -130,15 +131,17 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
               )}
               {activeShop.phone && (
                 <p className="text-[10px] text-slate-600 font-mono">
-                  {isBn ? "মোবাইল: " : "Phone: "}{activeShop.phone}
+                  {isBn ? "মোবাইল: " : "Phone: "}{isBn ? toBnDigits(activeShop.phone) : activeShop.phone}
                 </p>
               )}
               {activeShop.vatNumber && (
-                <p className="text-[9px] text-slate-400 font-mono">{activeShop.vatNumber}</p>
+                <p className="text-[9px] text-slate-400 font-mono">
+                  {isBn ? toBnDigits(activeShop.vatNumber) : activeShop.vatNumber}
+                </p>
               )}
               <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-[10px] text-slate-600">
-                <span className="font-semibold">{receipt.invoiceNo}</span>
-                <span>{formatDhakaDate(receipt.date, true)}</span>
+                <span className="font-semibold font-mono">{isBn ? toBnDigits(receipt.invoiceNo) : receipt.invoiceNo}</span>
+                <span>{formatDhakaDate(receipt.date, true, receiptLang)}</span>
               </div>
             </div>
 
@@ -163,9 +166,9 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                     {item.name}
                   </div>
                   <div className="text-[10px] text-slate-600 font-mono">
-                    {item.quantity} x {item.unitPrice}
+                    {isBn ? toBnDigits(item.quantity) : item.quantity} x {formatMoney(item.unitPrice, receiptLang)}
                   </div>
-                  <div className="font-semibold font-mono">{formatMoney(item.lineTotal)}</div>
+                  <div className="font-semibold font-mono">{formatMoney(item.lineTotal, receiptLang)}</div>
                 </div>
               ))}
             </div>
@@ -173,33 +176,33 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             {/* Calculation Breakdown */}
             <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5 text-[11px]">
               <div className="flex justify-between text-slate-600">
-                <span>{isBn ? "সাবটোটাল:" : "Subtotal:"}</span>
-                <span className="font-mono">{formatMoney(receipt.subtotal)}</span>
+                <span>{isBn ? "উপমোট (সাবটোটাল):" : "Subtotal:"}</span>
+                <span className="font-mono">{formatMoney(receipt.subtotal, receiptLang)}</span>
               </div>
               {receipt.discount > 0 && (
                 <div className="flex justify-between text-emerald-700 font-medium">
                   <span>{isBn ? "মূল্যছাড় (-):" : "Discount (-):"}</span>
-                  <span className="font-mono">-{formatMoney(receipt.discount)}</span>
+                  <span className="font-mono">-{formatMoney(receipt.discount, receiptLang)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-slate-900 text-xs pt-1 border-t border-slate-200">
                 <span>{isBn ? "সর্বমোট বিল:" : "Total Amount:"}</span>
-                <span className="font-mono">{formatMoney(receipt.total)}</span>
+                <span className="font-mono font-bold text-slate-900">{formatMoney(receipt.total, receiptLang)}</span>
               </div>
               <div className="flex justify-between text-slate-700">
                 <span>{isBn ? "পরিশোধিত:" : "Paid:"} ({receipt.accountName})</span>
-                <span className="font-mono font-semibold">{formatMoney(receipt.paid)}</span>
+                <span className="font-mono font-semibold">{formatMoney(receipt.paid, receiptLang)}</span>
               </div>
               {receipt.change > 0 && (
                 <div className="flex justify-between font-semibold text-emerald-700">
                   <span>{isBn ? "ফেরত:" : "Change:"}</span>
-                  <span className="font-mono">{formatMoney(receipt.change)}</span>
+                  <span className="font-mono">{formatMoney(receipt.change, receiptLang)}</span>
                 </div>
               )}
               {receipt.due > 0 && (
                 <div className="flex justify-between font-bold text-amber-700">
                   <span>{isBn ? "বাকি টাকা:" : "Due Balance:"}</span>
-                  <span className="font-mono">{formatMoney(receipt.due)}</span>
+                  <span className="font-mono">{formatMoney(receipt.due, receiptLang)}</span>
                 </div>
               )}
             </div>

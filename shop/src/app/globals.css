@@ -54,9 +54,9 @@ body {
   background: #94a3b8;
 }
 
-/* Print media styling (58mm/80mm thermal receipts, A4 sales invoices, and report statements) */
+/* Print media styling (Default 58mm/80mm Thermal POS Receipt Rolls) */
 @page {
-  margin: 5mm;
+  margin: 1mm 2mm;
   size: auto;
 }
 
@@ -66,56 +66,37 @@ body {
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    width: 100% !important;
   }
 
   body * {
     visibility: hidden;
   }
 
-  /* Printable containers must be visible */
+  /* Thermal Printable Containers */
   #thermal-receipt, #thermal-receipt *,
   #invoice-printable, #invoice-printable *,
   #statement-printable, #statement-printable * {
     visibility: visible;
   }
 
-  /* Fixed margins and positioning for thermal receipts (58mm/80mm) */
-  #thermal-receipt {
+  /* Fixed margins and optimal continuous roll styling for 58mm/80mm POS thermal printers */
+  #thermal-receipt,
+  #invoice-printable {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     max-width: 78mm;
     margin: 0 auto;
-    padding: 3mm 4mm;
+    padding: 2mm 3mm;
     background: #ffffff !important;
     color: #000000 !important;
     font-size: 11px;
     line-height: 1.35;
     box-sizing: border-box;
     border: none !important;
-  }
-
-  /* Fixed margins and positioning for invoices (A4 / standard) */
-  #invoice-printable {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 6mm 8mm;
-    background: #ffffff !important;
-    color: #000000 !important;
-    box-sizing: border-box;
-    border: 1px solid #e2e8f0;
-  }
-
-  #invoice-printable.thermal-mode {
-    max-width: 78mm;
-    padding: 2mm 3mm;
-    border: none;
-    font-size: 11px;
+    box-shadow: none !important;
   }
 
   #statement-printable {
@@ -124,11 +105,11 @@ body {
     top: 0;
     width: 100%;
     margin: 0;
-    padding: 5mm;
+    padding: 3mm;
     box-sizing: border-box;
   }
 
-  /* Hide print buttons and controls */
+  /* Hide print buttons, dialog backdrops, and navigation controls */
   .no-print,
   .print\:hidden {
     display: none !important;

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { LanguageToggle } from "@/components/shared/LanguageToggle";
 import { useHydratedLanguage } from "@/stores/language";
+import { toBnDigits } from "@/lib/bangla-numbers";
 
 export interface ShowcaseProduct {
   id: string;
@@ -540,7 +541,7 @@ export function PublicShowcaseClient({
                       <div className="flex items-baseline gap-1">
                         <span className="text-xs text-stone-400 font-medium">৳</span>
                         <span className="text-xl font-bold text-stone-900 tabular-nums">
-                          {p.sellingPrice.toLocaleString("bn-BD")}
+                          {isBn ? toBnDigits(p.sellingPrice) : p.sellingPrice}
                         </span>
                         <span className="text-xs text-stone-500">
                           / {unitDisplay}
@@ -740,7 +741,7 @@ export function PublicShowcaseClient({
               <div className="flex items-baseline gap-1">
                 <span className="text-xs text-stone-400">৳</span>
                 <span className="text-2xl font-bold text-stone-900 tabular-nums">
-                  {activeModalProduct.sellingPrice.toLocaleString("bn-BD")}
+                  {isBn ? toBnDigits(activeModalProduct.sellingPrice) : activeModalProduct.sellingPrice}
                 </span>
                 <span className="text-xs text-stone-500">
                   / {activeModalProduct.unit}
