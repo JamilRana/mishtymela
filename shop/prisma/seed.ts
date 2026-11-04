@@ -6,17 +6,23 @@ const prisma = new PrismaClient();
 async function main() {
   const org = await prisma.organization.upsert({
     where: { id: "00000000-0000-0000-0000-000000000001" },
-    update: {},
+    update: {
+      name: "মিষ্টি মেলা",
+      address: "ত্রিশাল",
+      phone: "01671578965",
+      email: "mishtymela@gmail.com",
+      receiptFooter: "মিষ্টি মেলা - স্বাদে ও ঐতিহ্যে অনন্য • সাথে থাকার জন্য ধন্যবাদ!",
+    },
     create: {
       id: "00000000-0000-0000-0000-000000000001",
-      name: "মৌচাক সুইটস অ্যান্ড কনফেকশনারি",
+      name: "মিষ্টি মেলা",
       currency: "BDT",
       timezone: "Asia/Dhaka",
-      address: "১২/এ সাতমসজিদ রোড, ধানমন্ডি, ঢাকা-১২০৯",
-      phone: "০১৭১১-২৩৪৫৬৭ (+880 1711-234567)",
-      email: "info@mouchaksweets.com",
+      address: "ত্রিশাল",
+      phone: "01671578965",
+      email: "mishtymela@gmail.com",
       vatNumber: "BIN-০০২৯৩৮৪৭১-০১০১",
-      receiptFooter: "স্বাদে ও ঐতিহ্যে অনন্য • মিষ্টির মিষ্টি মুখ • সাথে থাকার জন্য ধন্যবাদ!",
+      receiptFooter: "মিষ্টি মেলা - স্বাদে ও ঐতিহ্যে অনন্য • সাথে থাকার জন্য ধন্যবাদ!",
     },
   });
 
@@ -61,11 +67,18 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "owner@example.com" },
-    update: { passwordHash: adminHash, role: "OWNER", active: true },
+    update: {
+      name: "Abu Foysal Tarafdar (Jehan)",
+      phone: "01671578965",
+      passwordHash: adminHash,
+      role: "OWNER",
+      active: true,
+    },
     create: {
       organizationId: org.id,
-      name: "Shop Owner (Admin)",
+      name: "Abu Foysal Tarafdar (Jehan)",
       email: "owner@example.com",
+      phone: "01671578965",
       passwordHash: adminHash,
       role: "OWNER",
       active: true,

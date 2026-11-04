@@ -114,7 +114,7 @@ export const ShopProfileSection: React.FC<{ organization: OrganizationData }> = 
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder={language === "bn" ? "যেমন: মৌচাক সুইটস অ্যান্ড কনফেকশনারি" : "e.g. Mouchak Sweets & Confectionery"}
+            placeholder={language === "bn" ? "যেমন: মিষ্টি মেলা" : "e.g. Mishty Mela"}
             className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

@@ -16,12 +16,12 @@ export interface ShopInfo {
 }
 
 const DEFAULT_SHOP_INFO: ShopInfo = {
-  name: "মৌচাক সুইটস অ্যান্ড কনফেকশনারি",
-  phone: "০১৭১১-২৩৪৫৬৭ (+880 1711-234567)",
-  email: "info@mouchaksweets.com",
-  address: "১২/এ সাতমসজিদ রোড, ধানমন্ডি, ঢাকা-১২০৯",
+  name: "মিষ্টি মেলা (Mishty Mela)",
+  phone: "01671578965",
+  email: "mishtymela@gmail.com",
+  address: "ত্রিশাল (Trishal)",
   vatNumber: "BIN-০০২৯৩৮৪৭১-০১০১",
-  receiptFooter: "স্বাদে ও ঐতিহ্যে অনন্য • মিষ্টির মিষ্টি মুখ • সাথে থাকার জন্য ধন্যবাদ!",
+  receiptFooter: "মিষ্টি মেলা - স্বাদে ও ঐতিহ্যে অনন্য • সাথে থাকার জন্য ধন্যবাদ!",
   currency: "BDT",
   timezone: "Asia/Dhaka",
 };

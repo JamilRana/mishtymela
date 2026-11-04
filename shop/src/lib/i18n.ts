@@ -107,7 +107,7 @@ export interface TranslationDictionary {
 
 export const bnTranslations: TranslationDictionary = {
   // Brand & Shell
-  shopTitle: "মৌচাক সুইটস",
+  shopTitle: "মিষ্টি মেলা",
   tagline: "মিষ্টির দোকান ম্যানেজমেন্ট",
   online: "অনলাইন",
   back: "ফিরে যান",
@@ -212,7 +212,7 @@ export const bnTranslations: TranslationDictionary = {
 
 export const enTranslations: TranslationDictionary = {
   // Brand & Shell
-  shopTitle: "Mouchak Sweets",
+  shopTitle: "Mishty Mela",
   tagline: "Sweet Shop Retail Core",
   online: "Online",
   back: "Back",

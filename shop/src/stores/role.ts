@@ -16,11 +16,11 @@ export const useRoleStore = create<RoleStore>()(
   persist(
     (set, get) => ({
       activeRole: "ADMIN",
-      activeUserName: "Al-Amin Hossain (Admin)",
+      activeUserName: "Abu Foysal Tarafdar (Jehan)",
       setActiveRole: (role: Role, userName?: string) => {
         const defaultNames: Record<string, string> = {
-          ADMIN: "Al-Amin Hossain (Admin)",
-          OWNER: "Al-Amin Hossain (Owner)",
+          ADMIN: "Abu Foysal Tarafdar (Jehan)",
+          OWNER: "Abu Foysal Tarafdar (Jehan)",
           MANAGER: "Rafiqul Islam (Manager)",
           CASHIER: "Kamal Uddin (Cashier)",
           STAFF: "Staff User",
@@ -69,7 +69,7 @@ export function useHydratedRole() {
   if (!hydrated) {
     return {
       activeRole: "ADMIN" as Role,
-      activeUserName: "Al-Amin Hossain (Admin)",
+      activeUserName: "Abu Foysal Tarafdar (Jehan)",
       setActiveRole: store.setActiveRole,
       canAccess: (_module: string) => true,
     };
