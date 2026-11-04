@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -17,12 +17,14 @@ import {
   Edit3,
   Check,
   RotateCcw,
+  Calendar,
 } from "lucide-react";
 import { MoneyText, formatMoney } from "@/components/shared/MoneyText";
 import { DateTimeText, formatDhakaDate } from "@/components/shared/DateTimeText";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Pagination } from "@/components/shared/Pagination";
+import { TableSkeleton } from "@/components/shared/Skeleton";
 import { recordSalePaymentAction, voidSaleAction, updateSaleAction } from "@/actions/sales";
 import { toBnDigits } from "@/lib/bangla-numbers";
 import { useLanguageStore } from "@/stores/language";
@@ -73,6 +75,13 @@ interface SalesManagerProps {
   currentPage?: number;
   pageSize?: number;
   totalPages?: number;
+  periodSummary?: {
+    totalRevenue: number;
+    totalPaid: number;
+    totalDue: number;
+    period: string;
+    label: string;
+  };
   accounts: SalesAccount[];
   shopProfile?: {
     name?: string | null;
@@ -89,6 +98,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
   totalCount,
   currentPage,
   pageSize: initialPageSize = 25,
+  periodSummary,
   accounts,
   shopProfile,
 }) => {
@@ -99,6 +109,14 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
   const isServerPaginated = totalCount !== undefined;
   const currentQ = searchParams.get("q") || "";
   const currentStatus = searchParams.get("status") || "all";
+  const currentPeriod = searchParams.get("period") || "today";
+  const currentStart = searchParams.get("startDate") || "";
+  const currentEnd = searchParams.get("endDate") || "";
+
+  const [periodFilter, setPeriodFilter] = useState(currentPeriod);
+  const [customStart, setCustomStart] = useState(currentStart);
+  const [customEnd, setCustomEnd] = useState(currentEnd);
+  const [isPending, startTransition] = useTransition();
 
   const storedShop = useOrganizationStore((s) => s.shopInfo);
   const activeShop = {
@@ -164,6 +182,32 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
     }
   };
 
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriodFilter(newPeriod);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", newPeriod);
+    params.set("page", "1");
+    if (newPeriod !== "custom") {
+      params.delete("startDate");
+      params.delete("endDate");
+      startTransition(() => {
+        router.push(`/sales?${params.toString()}`);
+      });
+    }
+  };
+
+  const handleCustomDateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", "custom");
+    params.set("startDate", customStart);
+    params.set("endDate", customEnd);
+    params.set("page", "1");
+    startTransition(() => {
+      router.push(`/sales?${params.toString()}`);
+    });
+  };
+
   const handleStatusChange = (newStatus: string) => {
     setStatusFilter(newStatus);
     if (isServerPaginated) {
@@ -174,7 +218,9 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
         params.delete("status");
       }
       params.set("page", "1");
-      router.push(`/sales?${params.toString()}`);
+      startTransition(() => {
+        router.push(`/sales?${params.toString()}`);
+      });
     }
   };
 
@@ -188,7 +234,9 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
         params.delete("q");
       }
       params.set("page", "1");
-      router.push(`/sales?${params.toString()}`);
+      startTransition(() => {
+        router.push(`/sales?${params.toString()}`);
+      });
     }
   };
 
@@ -304,7 +352,122 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Search & Filter Bar */}
+      {/* Date & Period Filtering Bar (Default: Today) */}
+      <div className="bg-white p-3.5 border border-slate-200 rounded-lg shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800">বিক্রয় সময়কাল</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                  {periodSummary?.label || "আজ"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                ডিফল্টভাবে আজকের বিক্রয় প্রদর্শিত হচ্ছে
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Period Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-md text-xs font-semibold">
+            {(
+              [
+                { id: "today", label: "আজ (Today)" },
+                { id: "yesterday", label: "গতকাল" },
+                { id: "this_month", label: "এই মাস" },
+                { id: "all", label: "সব বিক্রয়" },
+                { id: "custom", label: "তারিখ রেঞ্জ" },
+              ] as const
+            ).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handlePeriodChange(p.id)}
+                className={cn(
+                  "px-3 py-1 rounded transition-all cursor-pointer",
+                  periodFilter === p.id
+                    ? "bg-white text-rose-700 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Date Range Selector */}
+        {periodFilter === "custom" && (
+          <form
+            onSubmit={handleCustomDateSubmit}
+            className="flex flex-wrap items-end gap-2.5 pt-2.5 border-t border-slate-100 text-xs animate-in fade-in"
+          >
+            <div>
+              <label className="text-slate-500 font-medium block mb-1">শুরুর তারিখ</label>
+              <input
+                type="date"
+                required
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded font-semibold text-slate-800 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-slate-500 font-medium block mb-1">শেষের তারিখ</label>
+              <input
+                type="date"
+                required
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded font-semibold text-slate-800 text-xs"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="px-3 py-1 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded font-bold transition-colors cursor-pointer"
+            >
+              {isPending ? "ফিল্টার হচ্ছে..." : "ফিল্টার করুন"}
+            </button>
+          </form>
+        )}
+
+        {/* Selected Period Metrics Strip */}
+        {periodSummary && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5 border-t border-slate-100 text-xs">
+            <div className="p-2 bg-slate-50 rounded border border-slate-100">
+              <span className="text-[10px] text-slate-500 block uppercase font-medium">মোট বিক্রয়</span>
+              <span className="font-bold text-slate-900 text-sm font-mono">
+                <MoneyText amount={periodSummary.totalRevenue} />
+              </span>
+            </div>
+            <div className="p-2 bg-emerald-50/60 rounded border border-emerald-100">
+              <span className="text-[10px] text-emerald-700 block uppercase font-medium">মোট আদায় (নগদ/ডিজিটাল)</span>
+              <span className="font-bold text-emerald-800 text-sm font-mono">
+                <MoneyText amount={periodSummary.totalPaid} />
+              </span>
+            </div>
+            <div className="p-2 bg-amber-50/60 rounded border border-amber-100">
+              <span className="text-[10px] text-amber-700 block uppercase font-medium">বাকি / ক্রেডিট (Due)</span>
+              <span className="font-bold text-amber-800 text-sm font-mono">
+                <MoneyText amount={periodSummary.totalDue} />
+              </span>
+            </div>
+            <div className="p-2 bg-slate-50 rounded border border-slate-100">
+              <span className="text-[10px] text-slate-500 block uppercase font-medium">মোট ইনভয়েস</span>
+              <span className="font-bold text-slate-800 text-sm font-mono">
+                {toBnDigits(totalCount || 0)} টি
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Search & Status Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 border border-slate-200 rounded-md">
         <div className="flex flex-1 items-center gap-2">
           <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
@@ -323,7 +486,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
             onChange={(e) => handleStatusChange(e.target.value)}
             className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
           >
-            <option value="all">{language === "bn" ? "সকল বিক্রয়" : "All Invoices"}</option>
+            <option value="all">{language === "bn" ? "সকল বিক্রয় অবস্থা" : "All Invoices"}</option>
             <option value="paid">{language === "bn" ? "পরিশোধিত" : "Fully Paid"}</option>
             <option value="due">{language === "bn" ? "বাকি / ক্রেডিট" : "Due / Credit"}</option>
             <option value="void">{language === "bn" ? "বাতিলকৃত" : "Voided"}</option>
@@ -331,25 +494,28 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
         </div>
       </div>
 
-      {/* Invoices Table */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
-              <th className="py-3 px-4">{t("invoiceNo")}</th>
-              <th className="py-3 px-4">{t("date")}</th>
-              <th className="py-3 px-4">{t("customer")}</th>
-              <th className="py-3 px-4 text-right">{t("total")}</th>
-              <th className="py-3 px-4 text-right">{t("paid")}</th>
-              <th className="py-3 px-4 text-right">{t("due")}</th>
-              <th className="py-3 px-4 text-center">{t("status")}</th>
-              <th className="py-3 px-4 text-right">{t("actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {paginatedSales.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-400">
+      {/* Invoices Table or Skeleton */}
+      {isPending ? (
+        <TableSkeleton rows={8} cols={8} />
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
+                <th className="py-3 px-4">{t("invoiceNo")}</th>
+                <th className="py-3 px-4">{t("date")}</th>
+                <th className="py-3 px-4">{t("customer")}</th>
+                <th className="py-3 px-4 text-right">{t("total")}</th>
+                <th className="py-3 px-4 text-right">{t("paid")}</th>
+                <th className="py-3 px-4 text-right">{t("due")}</th>
+                <th className="py-3 px-4 text-center">{t("status")}</th>
+                <th className="py-3 px-4 text-right">{t("actions")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {paginatedSales.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                   <Receipt className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-1" />
                   {language === "bn" ? "কোন বিক্রয় পাওয়া যায়নি।" : "No sales invoices recorded yet."}
                 </td>
@@ -421,6 +587,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
           />
         )}
       </div>
+      )}
 
       {/* Sale Detail & Printable Invoice Modal */}
       {selectedSale && (

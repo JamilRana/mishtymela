@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Wallet,
@@ -15,13 +16,17 @@ import {
   Building2,
   Smartphone,
   Banknote,
+  Calendar,
+  Scale,
 } from "lucide-react";
 import { MoneyText } from "@/components/shared/MoneyText";
 import { DateTimeText } from "@/components/shared/DateTimeText";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Pagination } from "@/components/shared/Pagination";
+import { TableSkeleton } from "@/components/shared/Skeleton";
 import { addManualTransactionAction, voidTransactionAction } from "@/actions/finance";
+import { toBnDigits } from "@/lib/bangla-numbers";
 import { cn } from "@/lib/utils";
 
 interface FinanceAccount {
@@ -49,21 +54,54 @@ interface TransactionRecord {
   voidedAt: string | null;
 }
 
+interface AccountClosingItem {
+  id: string;
+  name: string;
+  type: string;
+  openingBalance: number;
+  inflows: number;
+  outflows: number;
+  closingBalance: number;
+}
+
 interface FinanceManagerProps {
   accounts: FinanceAccount[];
   categories: TxCategoryItem[];
   transactions: TransactionRecord[];
+  closingBalanceSummary?: {
+    openingTotal: number;
+    inflowsTotal: number;
+    outflowsTotal: number;
+    closingTotal: number;
+    accounts: AccountClosingItem[];
+  };
+  currentPeriod?: string;
+  periodLabel?: string;
 }
 
 export const FinanceManager: React.FC<FinanceManagerProps> = ({
   accounts,
   categories,
   transactions,
+  closingBalanceSummary,
+  currentPeriod = "today",
+  periodLabel = "আজ",
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"INCOME" | "EXPENSE">("EXPENSE");
+
+  // Date / Month filter states (Default = today)
+  const currentStart = searchParams.get("startDate") || "";
+  const currentEnd = searchParams.get("endDate") || "";
+  const [periodFilter, setPeriodFilter] = useState(currentPeriod);
+  const [customStart, setCustomStart] = useState(currentStart);
+  const [customEnd, setCustomEnd] = useState(currentEnd);
+  const [isPending, startTransition] = useTransition();
 
   // Add transaction form state
   const [amount, setAmount] = useState("");
@@ -98,6 +136,30 @@ export const FinanceManager: React.FC<FinanceManagerProps> = ({
   });
 
   const paginatedTransactions = filteredTransactions.slice((page - 1) * pageSize, page * pageSize);
+
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriodFilter(newPeriod);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", newPeriod);
+    if (newPeriod !== "custom") {
+      params.delete("startDate");
+      params.delete("endDate");
+      startTransition(() => {
+        router.push(`/finance?${params.toString()}`);
+      });
+    }
+  };
+
+  const handleCustomDateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", "custom");
+    params.set("startDate", customStart);
+    params.set("endDate", customEnd);
+    startTransition(() => {
+      router.push(`/finance?${params.toString()}`);
+    });
+  };
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +248,125 @@ export const FinanceManager: React.FC<FinanceManagerProps> = ({
         ))}
       </div>
 
+      {/* Date & Period Filtering Bar (Default: Today) */}
+      <div className="bg-white p-3.5 border border-slate-200 rounded-lg shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-800">লেনদেন ও সমাপনী সময়কাল</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                  {periodLabel}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                ডিফল্টভাবে আজকের লেনদেন ও সমাপনী হিসাব প্রদর্শিত হচ্ছে
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Period Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-md text-xs font-semibold">
+            {(
+              [
+                { id: "today", label: "আজ (Today)" },
+                { id: "yesterday", label: "গতকাল" },
+                { id: "this_month", label: "এই মাস" },
+                { id: "all", label: "সব লেনদেন" },
+                { id: "custom", label: "তারিখ রেঞ্জ" },
+              ] as const
+            ).map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handlePeriodChange(p.id)}
+                className={cn(
+                  "px-3 py-1 rounded transition-all cursor-pointer",
+                  periodFilter === p.id
+                    ? "bg-white text-rose-700 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Date Range Selector */}
+        {periodFilter === "custom" && (
+          <form
+            onSubmit={handleCustomDateSubmit}
+            className="flex flex-wrap items-end gap-2.5 pt-2.5 border-t border-slate-100 text-xs animate-in fade-in"
+          >
+            <div>
+              <label className="text-slate-500 font-medium block mb-1">শুরুর তারিখ</label>
+              <input
+                type="date"
+                required
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded font-semibold text-slate-800 text-xs"
+              />
+            </div>
+            <div>
+              <label className="text-slate-500 font-medium block mb-1">শেষের তারিখ</label>
+              <input
+                type="date"
+                required
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded font-semibold text-slate-800 text-xs"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="px-3 py-1 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded font-bold transition-colors cursor-pointer"
+            >
+              {isPending ? "ফিল্টার হচ্ছে..." : "ফিল্টার করুন"}
+            </button>
+          </form>
+        )}
+
+        {/* Closing Balance for Selected Date/Month */}
+        {closingBalanceSummary && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2.5 border-t border-slate-100 text-xs">
+            <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
+              <span className="text-[10px] text-slate-500 block uppercase font-medium">শুরুর স্থিতি (Opening)</span>
+              <span className="font-bold text-slate-800 text-sm font-mono block mt-0.5">
+                <MoneyText amount={closingBalanceSummary.openingTotal} />
+              </span>
+              <span className="text-[10px] text-slate-400">সময়কালের শুরুর ব্যালেন্স</span>
+            </div>
+            <div className="p-2.5 bg-emerald-50/60 rounded border border-emerald-100">
+              <span className="text-[10px] text-emerald-700 block uppercase font-medium">(+) মোট জমা (Inflows)</span>
+              <span className="font-bold text-emerald-800 text-sm font-mono block mt-0.5">
+                +<MoneyText amount={closingBalanceSummary.inflowsTotal} />
+              </span>
+              <span className="text-[10px] text-slate-400">বিক্রয় ও অন্যান্য আয়</span>
+            </div>
+            <div className="p-2.5 bg-rose-50/60 rounded border border-rose-100">
+              <span className="text-[10px] text-rose-700 block uppercase font-medium">(-) মোট খরচ (Outflows)</span>
+              <span className="font-bold text-rose-800 text-sm font-mono block mt-0.5">
+                -<MoneyText amount={closingBalanceSummary.outflowsTotal} />
+              </span>
+              <span className="text-[10px] text-slate-400">খরচ ও কেনাকাটা</span>
+            </div>
+            <div className="p-2.5 bg-slate-900 text-white rounded border border-slate-800">
+              <span className="text-[10px] text-slate-400 block uppercase font-medium">(=) সমাপনী স্থিতি (Closing)</span>
+              <span className="font-bold text-emerald-400 text-sm font-mono block mt-0.5">
+                <MoneyText amount={closingBalanceSummary.closingTotal} />
+              </span>
+              <span className="text-[10px] text-slate-400">দিন/মাস শেষে ব্যালেন্স</span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Action Buttons & Filter Row */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 border border-slate-200 rounded-md">
         <div className="flex flex-1 items-center gap-2">
@@ -241,8 +422,11 @@ export const FinanceManager: React.FC<FinanceManagerProps> = ({
         </div>
       </div>
 
-      {/* Transactions Ledger Table */}
-      <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
+      {/* Transactions Ledger Table or Skeleton */}
+      {isPending ? (
+        <TableSkeleton rows={6} cols={7} />
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
@@ -345,6 +529,7 @@ export const FinanceManager: React.FC<FinanceManagerProps> = ({
           />
         )}
       </div>
+      )}
 
       {/* Add Manual Transaction Modal */}
       <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>

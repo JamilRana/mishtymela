@@ -12,6 +12,9 @@ export interface GetSalesOptions {
   pageSize?: number;
   search?: string;
   status?: "all" | "paid" | "due" | "void";
+  period?: "today" | "yesterday" | "this_month" | "all" | "custom";
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface PaginatedSalesResult {
@@ -47,6 +50,13 @@ export interface PaginatedSalesResult {
   page: number;
   pageSize: number;
   totalPages: number;
+  periodSummary: {
+    totalRevenue: number;
+    totalPaid: number;
+    totalDue: number;
+    period: string;
+    label: string;
+  };
 }
 
 export async function getSales(options?: GetSalesOptions): Promise<PaginatedSalesResult> {
@@ -57,7 +67,53 @@ export async function getSales(options?: GetSalesOptions): Promise<PaginatedSale
   const pageSize = Math.max(1, Math.min(200, options?.pageSize ?? 25));
   const skip = (page - 1) * pageSize;
 
+  const now = new Date();
+  const dhakaFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = dhakaFormatter.format(now);
+  const [currentYear, currentMonth] = todayStr.split("-").map(Number);
+
   const where: any = { organizationId: orgId };
+
+  // Default period is "today"
+  const period = options?.period || "today";
+  let label = "আজ";
+
+  if (period === "today") {
+    where.createdAt = {
+      gte: new Date(`${todayStr}T00:00:00+06:00`),
+      lte: new Date(`${todayStr}T23:59:59.999+06:00`),
+    };
+    label = `আজ (${todayStr})`;
+  } else if (period === "yesterday") {
+    const yDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yStr = dhakaFormatter.format(yDate);
+    where.createdAt = {
+      gte: new Date(`${yStr}T00:00:00+06:00`),
+      lte: new Date(`${yStr}T23:59:59.999+06:00`),
+    };
+    label = `গতকাল (${yStr})`;
+  } else if (period === "this_month") {
+    const mStr = String(currentMonth).padStart(2, "0");
+    const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+    where.createdAt = {
+      gte: new Date(`${currentYear}-${mStr}-01T00:00:00+06:00`),
+      lte: new Date(`${currentYear}-${mStr}-${String(lastDay).padStart(2, "0")}T23:59:59.999+06:00`),
+    };
+    label = `এই মাস`;
+  } else if (period === "custom" && options?.startDate && options?.endDate) {
+    where.createdAt = {
+      gte: new Date(`${options.startDate}T00:00:00+06:00`),
+      lte: new Date(`${options.endDate}T23:59:59.999+06:00`),
+    };
+    label = `${options.startDate} হতে ${options.endDate}`;
+  } else if (period === "all") {
+    label = "সব বিক্রয়";
+  }
 
   if (options?.status && options.status !== "all") {
     if (options.status === "void") {
@@ -75,7 +131,7 @@ export async function getSales(options?: GetSalesOptions): Promise<PaginatedSale
     ];
   }
 
-  const [totalCount, sales] = await Promise.all([
+  const [totalCount, sales, periodAgg] = await Promise.all([
     prisma.sale.count({ where }),
     prisma.sale.findMany({
       where,
@@ -88,6 +144,17 @@ export async function getSales(options?: GetSalesOptions): Promise<PaginatedSale
       orderBy: { createdAt: "desc" },
       skip,
       take: pageSize,
+    }),
+    prisma.sale.aggregate({
+      where: {
+        organizationId: orgId,
+        status: "COMPLETED",
+        ...(where.createdAt ? { createdAt: where.createdAt } : {}),
+      },
+      _sum: {
+        total: true,
+        paid: true,
+      },
     }),
   ]);
 
@@ -126,12 +193,22 @@ export async function getSales(options?: GetSalesOptions): Promise<PaginatedSale
     };
   });
 
+  const totalRev = Number(periodAgg._sum.total || 0);
+  const totalPd = Number(periodAgg._sum.paid || 0);
+
   return {
     sales: mappedSales,
     totalCount,
     page,
     pageSize,
     totalPages: Math.ceil(totalCount / pageSize),
+    periodSummary: {
+      totalRevenue: totalRev,
+      totalPaid: totalPd,
+      totalDue: Math.max(0, totalRev - totalPd),
+      period,
+      label,
+    },
   };
 }
 

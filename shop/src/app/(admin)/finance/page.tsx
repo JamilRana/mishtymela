@@ -5,11 +5,24 @@ import { FinanceManager } from "@/components/finance/FinanceManager";
 
 export const dynamic = "force-dynamic";
 
-export default async function FinancePage() {
-  const [accounts, categories, transactions] = await Promise.all([
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{
+    period?: "today" | "yesterday" | "this_month" | "all" | "custom";
+    startDate?: string;
+    endDate?: string;
+  }>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const period = params.period || "today";
+  const startDate = params.startDate || undefined;
+  const endDate = params.endDate || undefined;
+
+  const [accounts, categories, txData] = await Promise.all([
     getAccounts(),
     getTxCategories(),
-    getTransactions(),
+    getTransactions({ period, startDate, endDate }),
   ]);
 
   return (
@@ -21,7 +34,10 @@ export default async function FinancePage() {
       <FinanceManager
         accounts={accounts}
         categories={categories}
-        transactions={transactions}
+        transactions={txData.transactions}
+        closingBalanceSummary={txData.closingBalanceSummary}
+        currentPeriod={txData.period}
+        periodLabel={txData.label}
       />
     </div>
   );

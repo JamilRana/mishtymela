@@ -15,6 +15,9 @@ export default async function SalesPage({
     pageSize?: string;
     q?: string;
     status?: "all" | "paid" | "due" | "void";
+    period?: "today" | "yesterday" | "this_month" | "all" | "custom";
+    startDate?: string;
+    endDate?: string;
   }>;
 }) {
   const params = searchParams ? await searchParams : {};
@@ -22,9 +25,12 @@ export default async function SalesPage({
   const pageSize = params.pageSize ? parseInt(params.pageSize, 10) : 25;
   const search = params.q || undefined;
   const status = params.status || "all";
+  const period = params.period || "today";
+  const startDate = params.startDate || undefined;
+  const endDate = params.endDate || undefined;
 
   const [salesData, accounts, org] = await Promise.all([
-    getSales({ page, pageSize, search, status }),
+    getSales({ page, pageSize, search, status, period, startDate, endDate }),
     getAccounts(),
     getOrganizationAction(),
   ]);
@@ -41,6 +47,7 @@ export default async function SalesPage({
         currentPage={salesData.page}
         pageSize={salesData.pageSize}
         totalPages={salesData.totalPages}
+        periodSummary={salesData.periodSummary}
         accounts={accounts}
         shopProfile={org}
       />

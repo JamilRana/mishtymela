@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
   const [initialData, org] = await Promise.all([
-    getDateRangeReportAction({ period: "this_month" }),
+    getDateRangeReportAction({ period: "today" }),
     getOrganizationAction(),
   ]);
 
