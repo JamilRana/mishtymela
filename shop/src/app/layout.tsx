@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Shop Management System",
-  description: "Retail shop inventory, POS, and financial management system",
+  title: "মিষ্টি মেলা (Mishty Mela) | ত্রিশাল - ঐতিহ্যবাহী মিষ্টি ও দই",
+  description:
+    "ত্রিশালের সেরা খাঁটি মিষ্টি, স্পেশাল রসমালাই, বগুড়ার মিষ্টি দই ও গাওয়া ঘি। খুচরা বিক্রয় ও যেকোনো অনুষ্ঠানের জন্য পাইকারি মিষ্টির অর্ডার গ্রহণ করা হয়।",
 };
 
 export default function RootLayout({

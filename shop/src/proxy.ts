@@ -17,15 +17,13 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = token ? await verifyToken(token) : null;
 
-  // 1. Unauthenticated users
+  // 1. Unauthenticated users - allow public showcase & login
   if (!session) {
-    if (pathname === "/login") {
+    if (pathname === "/" || pathname === "/login" || pathname === "/showcase") {
       return NextResponse.next();
     }
     const loginUrl = new URL("/login", request.url);
-    if (pathname !== "/") {
-      loginUrl.searchParams.set("from", pathname);
-    }
+    loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -37,12 +35,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // 3. Root path redirect
+  // 3. Authenticated users visiting / - allow viewing showcase with staff toolbar
   if (pathname === "/") {
-    if (session.role === "CASHIER" || session.role === "STAFF") {
-      return NextResponse.redirect(new URL("/pos", request.url));
-    }
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.next();
   }
 
   // 4. Role-based Route Guards
