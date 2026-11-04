@@ -55,21 +55,82 @@ body {
 }
 
 /* Print media styling (58mm/80mm thermal receipts, A4 sales invoices, and report statements) */
+@page {
+  margin: 5mm;
+  size: auto;
+}
+
 @media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   body * {
     visibility: hidden;
   }
+
+  /* Printable containers must be visible */
   #thermal-receipt, #thermal-receipt *,
   #invoice-printable, #invoice-printable *,
   #statement-printable, #statement-printable * {
     visibility: visible;
   }
-  #thermal-receipt, #invoice-printable, #statement-printable {
+
+  /* Fixed margins and positioning for thermal receipts (58mm/80mm) */
+  #thermal-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 78mm;
+    margin: 0 auto;
+    padding: 3mm 4mm;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px;
+    line-height: 1.35;
+    box-sizing: border-box;
+    border: none !important;
+  }
+
+  /* Fixed margins and positioning for invoices (A4 / standard) */
+  #invoice-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 6mm 8mm;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-sizing: border-box;
+    border: 1px solid #e2e8f0;
+  }
+
+  #invoice-printable.thermal-mode {
+    max-width: 78mm;
+    padding: 2mm 3mm;
+    border: none;
+    font-size: 11px;
+  }
+
+  #statement-printable {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     margin: 0;
-    padding: 0;
+    padding: 5mm;
+    box-sizing: border-box;
+  }
+
+  /* Hide print buttons and controls */
+  .no-print,
+  .print\:hidden {
+    display: none !important;
   }
 }

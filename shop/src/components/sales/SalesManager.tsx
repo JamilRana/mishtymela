@@ -14,13 +14,16 @@ import {
   Clock,
   User,
   ShoppingBag,
+  Edit3,
+  Check,
+  RotateCcw,
 } from "lucide-react";
 import { MoneyText, formatMoney } from "@/components/shared/MoneyText";
 import { DateTimeText } from "@/components/shared/DateTimeText";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Pagination } from "@/components/shared/Pagination";
-import { recordSalePaymentAction, voidSaleAction } from "@/actions/sales";
+import { recordSalePaymentAction, voidSaleAction, updateSaleAction } from "@/actions/sales";
 import { useLanguageStore } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { cn } from "@/lib/utils";
@@ -109,6 +112,19 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
   const [search, setSearch] = useState(currentQ);
   const [statusFilter, setStatusFilter] = useState(currentStatus);
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
+
+  // Invoice Display & Language Options
+  const [invoiceLang, setInvoiceLang] = useState<"bn" | "en">(language);
+  const [invoiceFormat, setInvoiceFormat] = useState<"a4" | "thermal">("a4");
+
+  // Admin Invoice Editing State
+  const [isEditingInvoice, setIsEditingInvoice] = useState(false);
+  const [editCustomerName, setEditCustomerName] = useState("");
+  const [editDiscount, setEditDiscount] = useState("0");
+  const [editPaid, setEditPaid] = useState("0");
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
 
   // Collect Payment dialog state
   const [collectModalOpen, setCollectModalOpen] = useState(false);
@@ -243,6 +259,49 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
     }
   };
 
+  const handleSaveInvoiceEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSale) return;
+    setEditError(null);
+    setEditSuccess(null);
+    setIsSavingEdit(true);
+
+    try {
+      const res = await updateSaleAction({
+        saleId: selectedSale.id,
+        customerName: editCustomerName.trim(),
+        discount: Number(editDiscount || 0),
+        paid: Number(editPaid || 0),
+      });
+
+      if (!res.success) {
+        setEditError(res.error);
+        return;
+      }
+
+      // Update current modal state
+      setSelectedSale({
+        ...selectedSale,
+        customerName: res.sale.customerName,
+        discount: res.sale.discount,
+        total: res.sale.total,
+        paid: res.sale.paid,
+        due: res.sale.due,
+      });
+
+      setEditSuccess(
+        invoiceLang === "bn"
+          ? "ইনভয়েস সফলভাবে আপডেট হয়েছে!"
+          : "Invoice details updated successfully!"
+      );
+      setIsEditingInvoice(false);
+    } catch (err: any) {
+      setEditError(err?.message || "Failed to update invoice");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Search & Filter Bar */}
@@ -363,10 +422,20 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
 
       {/* Sale Detail & Printable Invoice Modal */}
       {selectedSale && (
-        <Dialog.Root open={Boolean(selectedSale)} onOpenChange={() => setSelectedSale(null)}>
+        <Dialog.Root
+          open={Boolean(selectedSale)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedSale(null);
+              setIsEditingInvoice(false);
+              setEditError(null);
+              setEditSuccess(null);
+            }
+          }}
+        >
           <Dialog.Portal>
             <Dialog.Overlay className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 animate-in fade-in" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-white rounded-lg p-5 shadow-2xl border border-slate-200 z-50 animate-in zoom-in-95 focus:outline-none max-h-[92vh] overflow-y-auto">
+            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-lg p-5 shadow-2xl border border-slate-200 z-50 animate-in zoom-in-95 focus:outline-none max-h-[92vh] overflow-y-auto">
               {/* Header Dialog Controls */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 print:hidden">
                 <div className="flex items-center gap-2">
@@ -375,7 +444,8 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                   </div>
                   <div>
                     <Dialog.Title className="text-sm font-bold text-slate-900">
-                      {t("invoice")}: <span className="font-mono text-blue-600">{selectedSale.invoiceNo}</span>
+                      {invoiceLang === "bn" ? "ইনভয়েস:" : "Invoice:"}{" "}
+                      <span className="font-mono text-blue-600">{selectedSale.invoiceNo}</span>
                     </Dialog.Title>
                     <Dialog.Description className="text-[11px] text-slate-500">
                       {selectedSale.customerName} • <DateTimeText date={selectedSale.createdAt} />
@@ -389,8 +459,210 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </Dialog.Close>
               </div>
 
-              {/* Printable Invoice Container */}
-              <div id="invoice-printable" className="my-3 p-4 bg-white border border-slate-200 rounded text-slate-800 text-xs">
+              {/* Admin Toolbar: Language, Format, and Edit Controls (Hidden when printing) */}
+              <div className="my-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs print:hidden space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {/* Language Switcher */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {invoiceLang === "bn" ? "ভাষা:" : "Language:"}
+                    </span>
+                    <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-white">
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceLang("bn")}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-bold rounded transition-colors",
+                          invoiceLang === "bn"
+                            ? "bg-rose-600 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        )}
+                      >
+                        বাংলা (BN)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceLang("en")}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-bold rounded transition-colors",
+                          invoiceLang === "en"
+                            ? "bg-slate-900 text-white shadow-2xs"
+                            : "text-slate-600 hover:text-slate-900"
+                        )}
+                      >
+                        English (EN)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Format Selector */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {invoiceLang === "bn" ? "ফরম্যাট:" : "Format:"}
+                    </span>
+                    <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-white">
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceFormat("a4")}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-semibold rounded transition-colors",
+                          invoiceFormat === "a4"
+                            ? "bg-slate-900 text-white shadow-2xs font-bold"
+                            : "text-slate-600 hover:text-slate-900"
+                        )}
+                      >
+                        A4 / Standard
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceFormat("thermal")}
+                        className={cn(
+                          "px-2.5 py-1 text-xs font-semibold rounded transition-colors",
+                          invoiceFormat === "thermal"
+                            ? "bg-slate-900 text-white shadow-2xs font-bold"
+                            : "text-slate-600 hover:text-slate-900"
+                        )}
+                      >
+                        Thermal (80mm)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Admin Change / Edit Button */}
+                  {selectedSale.status === "COMPLETED" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !isEditingInvoice;
+                        setIsEditingInvoice(next);
+                        if (next) {
+                          setEditCustomerName(selectedSale.customerName);
+                          setEditDiscount(selectedSale.discount.toString());
+                          setEditPaid(selectedSale.paid.toString());
+                          setEditError(null);
+                          setEditSuccess(null);
+                        }
+                      }}
+                      className={cn(
+                        "px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors",
+                        isEditingInvoice
+                          ? "bg-amber-100 text-amber-900 border border-amber-300"
+                          : "bg-white border border-slate-300 hover:bg-slate-100 text-slate-800"
+                      )}
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>
+                        {isEditingInvoice
+                          ? invoiceLang === "bn" ? "এডিট বন্ধ" : "Close Edit"
+                          : invoiceLang === "bn" ? "ইনভয়েস পরিবর্তন / এডিট" : "Edit Invoice"}
+                      </span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Edit Success Notification */}
+                {editSuccess && (
+                  <div className="p-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-xs flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{editSuccess}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Admin Edit Form (Displayed when editing invoice) */}
+              {isEditingInvoice && (
+                <form
+                  onSubmit={handleSaveInvoiceEdit}
+                  className="p-4 bg-amber-50/80 border border-amber-200 rounded-lg text-xs space-y-3 print:hidden mb-3 animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between font-bold text-amber-900">
+                    <span className="flex items-center gap-1.5">
+                      <Edit3 className="w-4 h-4 text-amber-700" />
+                      <span>{invoiceLang === "bn" ? "ইনভয়েসের তথ্য পরিবর্তন" : "Change Invoice Details"}</span>
+                    </span>
+                    <span className="text-[11px] font-normal text-amber-700">
+                      {invoiceLang === "bn" ? "অ্যাডমিন অনুমতি" : "Admin Permission"}
+                    </span>
+                  </div>
+
+                  {editError && (
+                    <div className="p-2 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs">
+                      {editError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">
+                        {invoiceLang === "bn" ? "কাস্টমারের নাম" : "Customer Name"}
+                      </label>
+                      <input
+                        type="text"
+                        value={editCustomerName}
+                        onChange={(e) => setEditCustomerName(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="e.g. জনাব রহিম"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">
+                        {invoiceLang === "bn" ? "মূল্যছাড় ৳ (Discount)" : "Discount (৳)"}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editDiscount}
+                        onChange={(e) => setEditDiscount(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-semibold mb-1">
+                        {invoiceLang === "bn" ? "পরিশোধিত ৳ (Paid Amount)" : "Paid Amount (৳)"}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editPaid}
+                        onChange={(e) => setEditPaid(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-amber-200">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingInvoice(false)}
+                      className="px-3 py-1.5 border border-slate-300 bg-white hover:bg-slate-100 rounded text-slate-700 font-medium"
+                    >
+                      {invoiceLang === "bn" ? "বাতিল" : "Cancel"}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingEdit}
+                      className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold shadow-xs transition-colors disabled:opacity-50"
+                    >
+                      {isSavingEdit
+                        ? invoiceLang === "bn" ? "সংরক্ষণ হচ্ছে..." : "Saving..."
+                        : invoiceLang === "bn" ? "পরিবর্তন সংরক্ষণ করুন" : "Save Changes"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Printable Invoice Container (Safe Margins & Clean Print Styling) */}
+              <div
+                id="invoice-printable"
+                className={cn(
+                  "my-3 p-6 bg-white border border-slate-200 rounded text-slate-800 text-xs box-border",
+                  invoiceFormat === "thermal" && "thermal-mode max-w-[78mm] mx-auto p-3 font-mono text-[11px]"
+                )}
+              >
                 {/* Shop Official Branding Header */}
                 <div className="text-center pb-3 border-b border-dashed border-slate-300">
                   <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
@@ -401,31 +673,35 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                   )}
                   <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-xs text-slate-500 font-mono mt-1">
                     {activeShop.phone && (
-                      <span>{language === "bn" ? "মোবাইল: " : "Phone: "}{activeShop.phone}</span>
+                      <span>{invoiceLang === "bn" ? "মোবাইল: " : "Phone: "}{activeShop.phone}</span>
                     )}
                     {activeShop.vatNumber && (
                       <span>• {activeShop.vatNumber}</span>
                     )}
                   </div>
                   <div className="mt-2 inline-block px-3 py-0.5 bg-slate-100 border border-slate-200 rounded font-bold text-[11px] text-slate-800 uppercase tracking-wider">
-                    {t("invoice")}
+                    {invoiceLang === "bn" ? "ক্যাশ মেমো / ইনভয়েস" : "CASH MEMO / INVOICE"}
                   </div>
                 </div>
 
                 {/* Metadata Row */}
                 <div className="my-3 flex justify-between items-start text-xs border-b border-slate-100 pb-2.5">
                   <div className="space-y-0.5">
-                    <div className="text-[10px] uppercase font-semibold text-slate-400">{t("invoiceNo")}</div>
+                    <div className="text-[10px] uppercase font-semibold text-slate-400">
+                      {invoiceLang === "bn" ? "ইনভয়েস নম্বর" : "Invoice No"}
+                    </div>
                     <div className="font-mono font-bold text-blue-700 text-sm">{selectedSale.invoiceNo}</div>
                     <div className="text-slate-700 pt-1">
-                      <span className="text-slate-500">{t("customer")}: </span>
+                      <span className="text-slate-500">{invoiceLang === "bn" ? "ক্রেতা:" : "Customer:"} </span>
                       <span className="font-bold text-slate-900">
-                        {selectedSale.customerName || (language === "bn" ? "খুচরা কাস্টমার" : "Walk-in Customer")}
+                        {selectedSale.customerName || (invoiceLang === "bn" ? "খুচরা ক্রেতা" : "Walk-in Customer")}
                       </span>
                     </div>
                   </div>
                   <div className="text-right space-y-0.5">
-                    <div className="text-[10px] uppercase font-semibold text-slate-400">{t("date")}</div>
+                    <div className="text-[10px] uppercase font-semibold text-slate-400">
+                      {invoiceLang === "bn" ? "তারিখ ও সময়" : "Date & Time"}
+                    </div>
                     <div className="font-mono text-slate-800">
                       <DateTimeText date={selectedSale.createdAt} />
                     </div>
@@ -446,7 +722,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                   <div className="my-3 p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center gap-2">
                     <Ban className="w-4 h-4 text-rose-500 shrink-0" />
                     <span>
-                      {language === "bn"
+                      {invoiceLang === "bn"
                         ? "এই বিক্রয়টি বাতিল করা হয়েছে। মালামাল পুনরায় স্টকে ফেরত গেছে।"
                         : "This sale was VOIDED. Stock was restored back to inventory."}
                     </span>
@@ -457,11 +733,11 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 <div className="my-3">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-slate-200 text-slate-500 text-[10px] uppercase font-semibold">
-                        <th className="py-1.5 text-left">{t("itemName")}</th>
-                        <th className="py-1.5 text-center">{t("quantity")}</th>
-                        <th className="py-1.5 text-right">{t("unitPrice")}</th>
-                        <th className="py-1.5 text-right">{t("lineTotal")}</th>
+                      <tr className="border-b border-slate-300 text-slate-600 text-[10px] uppercase font-bold">
+                        <th className="py-2 text-left">{invoiceLang === "bn" ? "আইটেম / পণ্যের নাম" : "Item Description"}</th>
+                        <th className="py-2 text-center">{invoiceLang === "bn" ? "পরিমাণ" : "Qty"}</th>
+                        <th className="py-2 text-right">{invoiceLang === "bn" ? "দর (৳)" : "Rate (৳)"}</th>
+                        <th className="py-2 text-right">{invoiceLang === "bn" ? "মোট (৳)" : "Total (৳)"}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -470,10 +746,10 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                           <td className="py-2 font-medium text-slate-900">{it.productName}</td>
                           <td className="py-2 text-center font-mono font-medium">{it.quantity}</td>
                           <td className="py-2 text-right font-mono text-slate-600">
-                            <MoneyText amount={it.unitPrice} />
+                            {formatMoney(it.unitPrice)}
                           </td>
                           <td className="py-2 text-right font-bold text-slate-900 font-mono">
-                            <MoneyText amount={it.lineTotal} />
+                            {formatMoney(it.lineTotal)}
                           </td>
                         </tr>
                       ))}
@@ -484,27 +760,27 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 {/* Totals Summary */}
                 <div className="bg-slate-50 p-3 rounded border border-slate-200 text-xs space-y-1.5 mt-3">
                   <div className="flex justify-between text-slate-600">
-                    <span>{t("subtotal")}:</span>
-                    <span className="font-mono font-medium"><MoneyText amount={selectedSale.subtotal} /></span>
+                    <span>{invoiceLang === "bn" ? "উপমোট (সাবটোটাল):" : "Subtotal:"}</span>
+                    <span className="font-mono font-medium">{formatMoney(selectedSale.subtotal)}</span>
                   </div>
                   {selectedSale.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-medium">
-                      <span>{t("discount")}:</span>
-                      <span className="font-mono">-<MoneyText amount={selectedSale.discount} /></span>
+                    <div className="flex justify-between text-emerald-700 font-medium">
+                      <span>{invoiceLang === "bn" ? "মূল্যছাড় (-):" : "Discount (-):"}</span>
+                      <span className="font-mono">-{formatMoney(selectedSale.discount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-sm text-slate-900 pt-1.5 border-t border-slate-200">
-                    <span>{t("totalAmount")}:</span>
-                    <span className="font-mono text-blue-700"><MoneyText amount={selectedSale.total} /></span>
+                    <span>{invoiceLang === "bn" ? "সর্বমোট প্রদেয় বিল:" : "Grand Total:"}</span>
+                    <span className="font-mono text-blue-700">{formatMoney(selectedSale.total)}</span>
                   </div>
                   <div className="flex justify-between text-slate-700">
-                    <span>{t("paid")}:</span>
-                    <span className="font-mono font-semibold text-emerald-700"><MoneyText amount={selectedSale.paid} /></span>
+                    <span>{invoiceLang === "bn" ? "পরিশোধিত টাকা:" : "Paid Amount:"}</span>
+                    <span className="font-mono font-semibold text-emerald-700">{formatMoney(selectedSale.paid)}</span>
                   </div>
                   {selectedSale.due > 0 && (
                     <div className="flex justify-between text-amber-700 font-bold">
-                      <span>{t("creditDue")}:</span>
-                      <span className="font-mono"><MoneyText amount={selectedSale.due} /></span>
+                      <span>{invoiceLang === "bn" ? "বাকি টাকা:" : "Due Balance:"}</span>
+                      <span className="font-mono">{formatMoney(selectedSale.due)}</span>
                     </div>
                   )}
                 </div>
@@ -513,6 +789,20 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 {activeShop.receiptFooter && (
                   <div className="mt-4 pt-3 border-t border-dashed border-slate-300 text-center text-xs text-slate-500 font-medium italic">
                     {activeShop.receiptFooter}
+                  </div>
+                )}
+
+                {/* Standard A4 Signature Block (Only visible on standard A4 layout during print) */}
+                {invoiceFormat === "a4" && (
+                  <div className="mt-10 pt-4 hidden print:flex justify-between items-end text-xs text-slate-600">
+                    <div className="text-center">
+                      <div className="w-36 border-t border-slate-400 mb-1" />
+                      <span>{invoiceLang === "bn" ? "ক্রেতার স্বাক্ষর" : "Customer Signature"}</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-36 border-t border-slate-400 mb-1" />
+                      <span>{invoiceLang === "bn" ? "কর্তৃপক্ষের স্বাক্ষর" : "Authorized Signature"}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -525,7 +815,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2.5 py-1.5 rounded transition-colors"
                   >
                     <Ban className="w-3.5 h-3.5" />
-                    {language === "bn" ? "বিক্রয় বাতিল করুন" : "Void Sale"}
+                    {invoiceLang === "bn" ? "বিক্রয় বাতিল করুন" : "Void Sale"}
                   </button>
                 ) : (
                   <div />
@@ -535,10 +825,10 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-semibold shadow-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-bold shadow-xs transition-colors"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    {t("printInvoice")}
+                    <span>{invoiceLang === "bn" ? "ইনভয়েস প্রিন্ট করুন" : "Print Invoice"}</span>
                   </button>
 
                   {selectedSale.status === "COMPLETED" && selectedSale.due > 0 && (
@@ -547,18 +837,23 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                         setCollectAmount(selectedSale.due.toString());
                         setCollectModalOpen(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold shadow-xs transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold shadow-xs transition-colors"
                     >
                       <CreditCard className="w-3.5 h-3.5" />
-                      {language === "bn" ? "বাকি আদায় করুন" : "Collect Payment"}
+                      {invoiceLang === "bn" ? "বাকি আদায় করুন" : "Collect Payment"}
                     </button>
                   )}
 
                   <button
-                    onClick={() => setSelectedSale(null)}
-                    className="px-3 py-1.5 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
+                    onClick={() => {
+                      setSelectedSale(null);
+                      setIsEditingInvoice(false);
+                      setEditError(null);
+                      setEditSuccess(null);
+                    }}
+                    className="px-3 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
                   >
-                    {t("cancel")}
+                    {invoiceLang === "bn" ? "বন্ধ করুন" : "Close"}
                   </button>
                 </div>
               </div>

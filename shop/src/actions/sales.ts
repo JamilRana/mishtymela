@@ -201,6 +201,74 @@ export async function recordSalePaymentAction(data: {
   }, "Failed to record payment.");
 }
 
+export async function updateSaleAction(data: {
+  saleId: string;
+  customerName?: string;
+  discount?: number;
+  paid?: number;
+}) {
+  return handleAction("updateSaleAction", async () => {
+    const session = await requireRole(["ADMIN", "OWNER"]);
+    const orgId = session.organizationId;
+
+    const existing = await prisma.sale.findUnique({
+      where: { id: data.saleId, organizationId: orgId },
+      include: { items: true, transactions: true },
+    });
+
+    if (!existing) {
+      throw new Error("Sale invoice not found.");
+    }
+
+    if (existing.status === "VOID") {
+      throw new Error("Cannot edit a voided sale.");
+    }
+
+    const subtotal = Number(existing.subtotal);
+    const discount =
+      data.discount !== undefined
+        ? Math.max(0, Number(data.discount))
+        : Number(existing.discount);
+    const total = Math.max(0, subtotal - discount);
+    const paid =
+      data.paid !== undefined
+        ? Math.max(0, Number(data.paid))
+        : Number(existing.paid);
+    const customerName =
+      data.customerName !== undefined ? data.customerName.trim() : existing.customerName;
+
+    const updated = await prisma.sale.update({
+      where: { id: data.saleId, organizationId: orgId },
+      data: {
+        customerName: customerName || null,
+        discount,
+        total,
+        paid,
+      },
+    });
+
+    try {
+      revalidatePath("/sales");
+      revalidatePath("/dashboard");
+      revalidatePath("/reports");
+      revalidatePath("/pos");
+    } catch {}
+
+    return {
+      sale: {
+        id: updated.id,
+        invoiceNo: updated.invoiceNo,
+        customerName: updated.customerName || "Walk-in Customer",
+        subtotal,
+        discount,
+        total,
+        paid,
+        due: Math.max(0, total - paid),
+      },
+    };
+  }, "Failed to update sale invoice.");
+}
+
 export async function voidSaleAction(saleId: string) {
   return handleAction("voidSaleAction", async () => {
     const session = await requireRole(["ADMIN", "OWNER"]);

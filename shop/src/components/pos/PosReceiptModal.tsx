@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Printer, Download, Plus, CheckCircle, X } from "lucide-react";
 import { formatMoney } from "@/components/shared/MoneyText";
 import { formatDhakaDate } from "@/components/shared/DateTimeText";
 import { useLanguageStore } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
+import { cn } from "@/lib/utils";
 
 export interface ReceiptData {
   invoiceNo: string;
@@ -46,7 +47,10 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   onNewSale,
   shopProfile,
 }) => {
-  const { t, language } = useLanguageStore();
+  const { language } = useLanguageStore();
+  const [receiptLang, setReceiptLang] = useState<"bn" | "en">(language);
+  const isBn = receiptLang === "bn";
+
   const storedShop = useOrganizationStore((s) => s.shopInfo);
   const activeShop = shopProfile?.name ? {
     name: shopProfile.name,
@@ -66,76 +70,102 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
     <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onNewSale(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 animate-in fade-in" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-lg p-6 shadow-2xl z-50 animate-in zoom-in-95 focus:outline-none">
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white rounded-lg p-5 shadow-2xl z-50 animate-in zoom-in-95 focus:outline-none">
           <Dialog.Title className="sr-only">Sale Receipt</Dialog.Title>
           <Dialog.Description className="sr-only">Print or view completed sale receipt</Dialog.Description>
-          {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-2 text-emerald-600 font-semibold text-sm">
-              <CheckCircle className="w-5 h-5" />
-              {t("saleCompleted")}
+          
+          {/* Header Controls (Hidden when printing) */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 print:hidden">
+            <div className="flex items-center gap-2 text-emerald-600 font-semibold text-xs sm:text-sm">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              <span>{isBn ? "বিক্রয় সম্পন্ন হয়েছে" : "Sale Completed"}</span>
             </div>
-            <button
-              onClick={onNewSale}
-              className="text-slate-400 hover:text-slate-600 p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
+
+            {/* Language Switcher */}
+            <div className="flex items-center gap-1.5">
+              <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => setReceiptLang("bn")}
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[11px] font-bold transition-colors",
+                    isBn ? "bg-rose-600 text-white" : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  বাংলা
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceiptLang("en")}
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[11px] font-bold transition-colors",
+                    !isBn ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  EN
+                </button>
+              </div>
+
+              <button
+                onClick={onNewSale}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Printable Receipt Paper Container */}
+          {/* Printable Thermal Receipt Paper Container */}
           <div
             id="thermal-receipt"
-            className="my-4 p-4 bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs font-mono select-text"
+            className="my-3 p-4 bg-white border border-slate-200 rounded text-slate-900 text-xs font-mono select-text"
           >
             {/* Store Header */}
             <div className="text-center pb-2 border-b border-dashed border-slate-300">
               <h2 className="font-bold text-sm text-slate-900 uppercase">
-                {activeShop.name || t("shopTitle")}
+                {activeShop.name}
               </h2>
               {activeShop.address && (
-                <p className="text-[10px] text-slate-600">{activeShop.address}</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">{activeShop.address}</p>
               )}
               {activeShop.phone && (
-                <p className="text-[10px] text-slate-500 font-mono">
-                  {language === "bn" ? "মোবাইল: " : "Tel: "}{activeShop.phone}
+                <p className="text-[10px] text-slate-600 font-mono">
+                  {isBn ? "মোবাইল: " : "Phone: "}{activeShop.phone}
                 </p>
               )}
               {activeShop.vatNumber && (
                 <p className="text-[9px] text-slate-400 font-mono">{activeShop.vatNumber}</p>
               )}
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                {receipt.invoiceNo}
-              </p>
-              <p className="text-[10px] text-slate-500">
-                {formatDhakaDate(receipt.date, true)}
-              </p>
+              <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-[10px] text-slate-600">
+                <span className="font-semibold">{receipt.invoiceNo}</span>
+                <span>{formatDhakaDate(receipt.date, true)}</span>
+              </div>
             </div>
 
             {/* Customer Info if applicable */}
             {receipt.customerName && (
-              <div className="py-1 text-[11px] border-b border-dashed border-slate-300">
-                <span className="text-slate-500">{language === "bn" ? "কাস্টমার: " : "Customer: "}</span>
+              <div className="py-1 text-[11px] border-b border-dashed border-slate-300 flex justify-between">
+                <span className="text-slate-500">{isBn ? "ক্রেতার নাম:" : "Customer:"}</span>
                 <span className="font-semibold">{receipt.customerName}</span>
               </div>
             )}
 
             {/* Line Items */}
             <div className="py-2 border-b border-dashed border-slate-300 space-y-1">
-              <div className="flex justify-between font-semibold text-[10px] text-slate-500 uppercase">
-                <span>{language === "bn" ? "আইটেম" : "Item"}</span>
-                <span>{language === "bn" ? "পরিমাণ x দর" : "Qty x Price"}</span>
-                <span>{language === "bn" ? "মোট" : "Total"}</span>
+              <div className="flex justify-between font-bold text-[10px] text-slate-500 uppercase">
+                <span>{isBn ? "আইটেম" : "Item"}</span>
+                <span>{isBn ? "পরিমাণ x দর" : "Qty x Rate"}</span>
+                <span>{isBn ? "মোট" : "Total"}</span>
               </div>
               {receipt.items.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-baseline text-[11px]">
-                  <div className="truncate max-w-[120px] font-sans">
+                  <div className="truncate max-w-[130px] font-sans">
                     {item.name}
                   </div>
-                  <div className="text-[10px] text-slate-500">
+                  <div className="text-[10px] text-slate-600 font-mono">
                     {item.quantity} x {item.unitPrice}
                   </div>
-                  <div className="font-semibold">{formatMoney(item.lineTotal)}</div>
+                  <div className="font-semibold font-mono">{formatMoney(item.lineTotal)}</div>
                 </div>
               ))}
             </div>
@@ -143,59 +173,58 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             {/* Calculation Breakdown */}
             <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5 text-[11px]">
               <div className="flex justify-between text-slate-600">
-                <span>{t("subtotal")}:</span>
-                <span>{formatMoney(receipt.subtotal)}</span>
+                <span>{isBn ? "সাবটোটাল:" : "Subtotal:"}</span>
+                <span className="font-mono">{formatMoney(receipt.subtotal)}</span>
               </div>
               {receipt.discount > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>{t("discount")}:</span>
-                  <span>-{formatMoney(receipt.discount)}</span>
+                <div className="flex justify-between text-emerald-700 font-medium">
+                  <span>{isBn ? "মূল্যছাড় (-):" : "Discount (-):"}</span>
+                  <span className="font-mono">-{formatMoney(receipt.discount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-slate-900 text-xs pt-1 border-t border-slate-200">
-                <span>{t("totalAmount")}:</span>
-                <span>{formatMoney(receipt.total)}</span>
+                <span>{isBn ? "সর্বমোট বিল:" : "Total Amount:"}</span>
+                <span className="font-mono">{formatMoney(receipt.total)}</span>
               </div>
               <div className="flex justify-between text-slate-700">
-                <span>{t("paid")} ({receipt.accountName}):</span>
-                <span>{formatMoney(receipt.paid)}</span>
+                <span>{isBn ? "পরিশোধিত:" : "Paid:"} ({receipt.accountName})</span>
+                <span className="font-mono font-semibold">{formatMoney(receipt.paid)}</span>
               </div>
               {receipt.change > 0 && (
                 <div className="flex justify-between font-semibold text-emerald-700">
-                  <span>{t("changeGiven")}:</span>
-                  <span>{formatMoney(receipt.change)}</span>
+                  <span>{isBn ? "ফেরত:" : "Change:"}</span>
+                  <span className="font-mono">{formatMoney(receipt.change)}</span>
                 </div>
               )}
               {receipt.due > 0 && (
                 <div className="flex justify-between font-bold text-amber-700">
-                  <span>{t("creditDue")}:</span>
-                  <span>{formatMoney(receipt.due)}</span>
+                  <span>{isBn ? "বাকি টাকা:" : "Due Balance:"}</span>
+                  <span className="font-mono">{formatMoney(receipt.due)}</span>
                 </div>
               )}
             </div>
 
             {/* Receipt Footer */}
             <div className="pt-2 text-center text-[10px] text-slate-500">
-              <p>{activeShop.receiptFooter || "স্বাদে ও ঐতিহ্যে অনন্য • Thank you for shopping with us!"}</p>
-              <p className="font-mono text-[9px] mt-0.5 text-slate-400">Sweet Shop Retail Core</p>
+              <p>{activeShop.receiptFooter || "স্বাদে ও ঐতিহ্যে অনন্য • ধন্যবাদ আবার আসবেন!"}</p>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-2 mt-4">
+          {/* Action Buttons (Hidden when printing) */}
+          <div className="grid grid-cols-2 gap-2 mt-4 print:hidden">
             <button
               onClick={handlePrint}
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold transition-colors"
             >
               <Printer className="w-4 h-4" />
-              {t("printThermalReceipt")}
+              <span>{isBn ? "রশিদ প্রিন্ট (Thermal)" : "Print Receipt"}</span>
             </button>
             <button
               onClick={onNewSale}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-semibold transition-colors"
             >
               <Plus className="w-4 h-4" />
-              {t("nextSale")}
+              <span>{isBn ? "পরবর্তী বিক্রয়" : "Next Sale"}</span>
             </button>
           </div>
         </Dialog.Content>
