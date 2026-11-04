@@ -42,6 +42,7 @@ export default async function HomePage() {
     id: p.id,
     name: p.name,
     unit: p.unit,
+    imageUrl: p.imageUrl,
     sellingPrice: Number(p.sellingPrice),
     categoryName: p.category?.name ?? "Special Sweets",
     categoryId: p.categoryId,

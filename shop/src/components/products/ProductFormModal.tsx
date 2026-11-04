@@ -28,6 +28,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     name: "",
     sku: "",
     barcode: "",
+    imageUrl: "",
     categoryId: "",
     unit: "pcs",
     productType: "RETAIL" as "RETAIL" | "RAW_MATERIAL" | "PACKAGING",
@@ -79,6 +80,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         name: formData.name,
         sku: formData.sku,
         barcode: formData.barcode || undefined,
+        imageUrl: formData.imageUrl || undefined,
         categoryId: formData.categoryId || undefined,
         unit: formData.unit,
         productType: formData.productType,
@@ -99,6 +101,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         name: "",
         sku: "",
         barcode: "",
+        imageUrl: "",
         categoryId: "",
         unit: "pcs",
         productType: "RETAIL",
@@ -183,6 +186,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   value={formData.barcode}
                   onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="font-medium text-slate-700 block mb-1">
+                  Product Image URL / মিষ্টির ছবি (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. /images/sweets/rasmalai.jpg or image link"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-xs"
                 />
               </div>
 

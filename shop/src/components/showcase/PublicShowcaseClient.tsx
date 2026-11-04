@@ -24,6 +24,7 @@ export interface ShowcaseProduct {
   id: string;
   name: string;
   unit: string;
+  imageUrl?: string | null;
   sellingPrice: number;
   categoryName: string;
   categoryId: string | null;
@@ -489,6 +490,21 @@ export function PublicShowcaseClient({
                 >
                   {/* Top info */}
                   <div className="space-y-3">
+                    {/* Optional Product Image */}
+                    {p.imageUrl && (
+                      <div
+                        onClick={() => setActiveModalProduct(p)}
+                        className="w-full aspect-4/3 rounded-lg overflow-hidden bg-stone-100 cursor-pointer border border-stone-100 mb-2 relative group/img"
+                      >
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name}
+                          className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">
                         {p.categoryName}
@@ -690,6 +706,15 @@ export function PublicShowcaseClient({
       {activeModalProduct && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-sm w-full p-5 border border-stone-200 shadow-xl space-y-4">
+            {activeModalProduct.imageUrl && (
+              <div className="w-full aspect-16/10 rounded-lg overflow-hidden bg-stone-100 border border-stone-100">
+                <img
+                  src={activeModalProduct.imageUrl}
+                  alt={activeModalProduct.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
             <div className="flex items-start justify-between gap-2">
               <div>
                 <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">

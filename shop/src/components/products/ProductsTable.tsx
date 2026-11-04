@@ -22,6 +22,7 @@ interface ProductItem {
   name: string;
   sku: string;
   barcode: string | null;
+  imageUrl?: string | null;
   unit: string;
   sellingPrice: number;
   avgCost: number;

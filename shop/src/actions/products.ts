@@ -27,6 +27,7 @@ export async function getProducts(options?: { sellableOnly?: boolean }) {
     name: p.name,
     sku: p.sku,
     barcode: p.barcode,
+    imageUrl: p.imageUrl,
     unit: p.unit,
     sellingPrice: Number(p.sellingPrice),
     avgCost: Number(p.avgCost),
@@ -189,6 +190,7 @@ const productSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
   barcode: z.string().optional(),
+  imageUrl: z.string().optional(),
   categoryId: z.string().optional(),
   unit: z.string().default("pcs"),
   productType: z.enum(["RETAIL", "RAW_MATERIAL", "PACKAGING"]).default("RETAIL"),
@@ -212,6 +214,7 @@ export async function createProduct(formData: z.input<typeof productSchema>) {
         name: data.name,
         sku: data.sku,
         barcode: data.barcode || null,
+        imageUrl: data.imageUrl || null,
         categoryId: data.categoryId || null,
         unit: data.unit,
         productType: data.productType,
@@ -245,6 +248,44 @@ export async function createProduct(formData: z.input<typeof productSchema>) {
 
     return { product };
   }, "Failed to create product.");
+}
+
+export async function updateProduct(
+  id: string,
+  formData: Partial<z.input<typeof productSchema>>
+) {
+  return handleAction("updateProduct", async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    const partialSchema = productSchema.partial();
+    const data = partialSchema.parse(formData);
+
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.sku !== undefined) updateData.sku = data.sku;
+    if (data.barcode !== undefined) updateData.barcode = data.barcode || null;
+    if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null;
+    if (data.unit !== undefined) updateData.unit = data.unit;
+    if (data.productType !== undefined) updateData.productType = data.productType;
+    if (data.isSellable !== undefined) updateData.isSellable = data.isSellable;
+    if (data.sellingPrice !== undefined) updateData.sellingPrice = data.sellingPrice;
+    if (data.reorderLevel !== undefined) updateData.reorderLevel = data.reorderLevel;
+
+    const product = await prisma.product.update({
+      where: { id, organizationId: orgId },
+      data: updateData,
+    });
+
+    try {
+      revalidatePath("/");
+      revalidatePath("/products");
+      revalidatePath("/pos");
+    } catch {}
+
+    return { product };
+  }, "Failed to update product.");
 }
 
 export async function toggleProductActive(id: string, active: boolean) {

@@ -105,6 +105,7 @@ model Product {
   name           String
   sku            String
   barcode        String?
+  imageUrl       String?
   unit           String          @default("pcs")
   productType    ProductType     @default(RETAIL)
   isSellable     Boolean         @default(true)
