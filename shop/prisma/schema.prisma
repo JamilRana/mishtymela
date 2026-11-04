@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  MANAGER
+  CASHIER
+  STAFF
+}
+
+enum ProductType {
+  RETAIL
+  RAW_MATERIAL
+  PACKAGING
+}
+
+enum MovementType {
+  PURCHASE
+  SALE
+  SALE_VOID
+  ADJUSTMENT
+  PRODUCTION
+}
+
+enum SaleStatus {
+  COMPLETED
+  VOID
+}
+
+enum TxType {
+  INCOME
+  EXPENSE
+}
+
+// SALE and PURCHASE rows are system-generated; only MANUAL counts as operating income/expense.
+enum TxSource {
+  SALE
+  PURCHASE
+  MANUAL
+}
+
+enum AccountType {
+  CASH
+  MOBILE
+  BANK
+}
+
+model Organization {
+  id             String          @id @default(uuid())
+  name           String
+  currency       String          @default("BDT")
+  timezone       String          @default("Asia/Dhaka")
+  address        String?
+  phone          String?
+  email          String?
+  vatNumber      String?
+  receiptFooter  String?
+  createdAt      DateTime        @default(now())
+  users          User[]
+  categories     Category[]
+  products       Product[]
+  sales          Sale[]
+  accounts       Account[]
+  txCategories   TxCategory[]
+  transactions   Transaction[]
+  stockMovements StockMovement[]
+  invoiceSeq     InvoiceSequence?
+}
+
+model User {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  email          String       @unique
+  phone          String?
+  passwordHash   String?
+  role           Role         @default(CASHIER)
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Category {
+  id             String       @id @default(uuid())
+  organizationId String
+  name           String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  products       Product[]
+
+  @@unique([organizationId, name])
+}
+
+model Product {
+  id             String          @id @default(uuid())
+  organizationId String
+  categoryId     String?
+  name           String
+  sku            String
+  barcode        String?
+  unit           String          @default("pcs")
+  productType    ProductType     @default(RETAIL)
+  isSellable     Boolean         @default(true)
+  sellingPrice   Decimal         @db.Decimal(14, 2)
+  avgCost        Decimal         @default(0) @db.Decimal(14, 4)
+  stockQty       Decimal         @default(0) @db.Decimal(14, 3)
+  reorderLevel   Decimal         @default(0) @db.Decimal(14, 3)
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  movements      StockMovement[]
+  saleItems      SaleItem[]
+
+  @@unique([organizationId, sku])
+  @@unique([organizationId, barcode])
+  @@index([organizationId, active])
+}
+
+// Permanent stock history. quantityDelta is SIGNED (+ in, - out).
+model StockMovement {
+  id             String       @id @default(uuid())
+  organizationId String
+  productId      String
+  type           MovementType
+  quantityDelta  Decimal      @db.Decimal(14, 3)
+  unitCost       Decimal      @db.Decimal(14, 4)
+  balanceAfter   Decimal      @db.Decimal(14, 3)
+  refType        String?
+  refId          String?
+  note           String?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  product        Product      @relation(fields: [productId], references: [id])
+
+  @@index([organizationId, productId, createdAt])
+}
+
+model InvoiceSequence {
+  organizationId String       @id
+  lastNo         Int          @default(0)
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Sale {
+  id             String        @id @default(uuid())
+  organizationId String
+  invoiceNo      String
+  customerName   String?
+  subtotal       Decimal       @db.Decimal(14, 2)
+  discount       Decimal       @default(0) @db.Decimal(14, 2)
+  total          Decimal       @db.Decimal(14, 2)
+  paid           Decimal       @default(0) @db.Decimal(14, 2)
+  status         SaleStatus    @default(COMPLETED)
+  idempotencyKey String?       @unique
+  createdById    String?
+  createdAt      DateTime      @default(now())
+  voidedAt       DateTime?
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  items          SaleItem[]
+  transactions   Transaction[]
+
+  @@unique([organizationId, invoiceNo])
+  @@index([organizationId, createdAt])
+}
+
+model SaleItem {
+  id          String   @id @default(uuid())
+  saleId      String
+  productId   String
+  productName String
+  quantity    Decimal  @db.Decimal(14, 3)
+  unitPrice   Decimal  @db.Decimal(14, 2)
+  unitCost    Decimal  @db.Decimal(14, 4)
+  lineTotal   Decimal  @db.Decimal(14, 2)
+  sale        Sale     @relation(fields: [saleId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@index([productId])
+}
+
+model Account {
+  id             String        @id @default(uuid())
+  organizationId String
+  name           String
+  type           AccountType
+  active         Boolean       @default(true)
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  transactions   Transaction[]
+
+  @@unique([organizationId, name])
+}
+
+model TxCategory {
+  id             String        @id @default(uuid())
+  organizationId String
+  name           String
+  type           TxType
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  transactions   Transaction[]
+
+  @@unique([organizationId, name, type])
+}
+
+// Money in/out. Never edited after posting: voided transactions keep voidedAt set.
+model Transaction {
+  id             String        @id @default(uuid())
+  organizationId String
+  type           TxType
+  source         TxSource      @default(MANUAL)
+  amount         Decimal       @db.Decimal(14, 2)
+  accountId      String
+  categoryId     String?
+  saleId         String?
+  description    String?
+  occurredAt     DateTime      @default(now())
+  createdById    String?
+  voidedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  account        Account       @relation(fields: [accountId], references: [id])
+  category       TxCategory?   @relation(fields: [categoryId], references: [id])
+  sale           Sale?         @relation(fields: [saleId], references: [id])
+
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, type, source])
+}
