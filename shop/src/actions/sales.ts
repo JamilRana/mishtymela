@@ -232,6 +232,7 @@ export async function createSaleAction(data: {
       paid: data.paid,
       accountId: data.accountId,
       customerName: data.customerName,
+      userId: session.userId,
     });
 
     try {
@@ -354,6 +355,7 @@ export async function voidSaleAction(saleId: string) {
     await voidSale({
       orgId,
       saleId,
+      userId: session.userId,
     });
 
     try {

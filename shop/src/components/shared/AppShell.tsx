@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MoreHorizontal } from "lucide-react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -135,7 +136,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
             >
               {shopName || t("shopTitle")}
             </span>
-            <span className="text-[10px] text-slate-500 font-medium" suppressHydrationWarning>
+            <span className="text-xs text-slate-500 font-medium" suppressHydrationWarning>
               {activeRole === "ADMIN" ? t("roleAdmin") : activeRole === "MANAGER" ? t("roleManager") : t("roleCashier")}
             </span>
           </div>
@@ -196,7 +197,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                   >
                     {shopName || t("shopTitle")}
                   </span>
-                  <span className="text-[11px] text-slate-400 truncate" suppressHydrationWarning>
+                  <span className="text-xs text-slate-500 truncate" suppressHydrationWarning>
                     {t("tagline")}
                   </span>
                 </div>
@@ -229,7 +230,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
         {/* Language Switcher in Sidebar */}
         {!collapsed && (
           <div className="px-3.5 pt-3 pb-1 flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Language / ভাষা</span>
+            <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Language / ভাষা</span>
             <LanguageToggle />
           </div>
         )}
@@ -276,7 +277,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                   <span className="text-xs font-semibold text-slate-900 truncate leading-tight">
                     {activeUserName}
                   </span>
-                  <span className="text-[10px] text-rose-600 font-bold tracking-wider">
+                  <span className="text-xs text-rose-600 font-bold tracking-wider">
                     {activeRole === "ADMIN" ? t("roleAdmin") : activeRole === "MANAGER" ? t("roleManager") : t("roleCashier")}
                   </span>
                 </div>
@@ -317,28 +318,29 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50 bg-slate-900/50 flex">
-          <div className="w-64 bg-white h-full p-4 flex flex-col justify-between shadow-xl animate-in slide-in-from-left duration-200">
+          <div className="w-72 sm:w-80 bg-white h-full p-4 flex flex-col justify-between shadow-xl animate-in slide-in-from-left duration-200">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex flex-col">
-                  <span className="font-bold text-slate-900 text-sm">{t("shopTitle")}</span>
-                  <span className="text-[11px] text-slate-400">
+                  <span className="font-bold text-slate-900 text-base">{t("shopTitle")}</span>
+                  <span className="text-xs font-bold text-rose-700">
                     {activeRole === "ADMIN" ? t("roleAdmin") : activeRole === "MANAGER" ? t("roleManager") : t("roleCashier")}
                   </span>
                 </div>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600"
+                  className="p-1.5 text-slate-500 hover:text-slate-800 rounded-md"
+                  aria-label="Close menu"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="py-2 border-b border-slate-100">
+              <div className="py-2.5 border-b border-slate-100">
                 <LanguageToggle />
               </div>
 
-              <nav className="mt-3 space-y-1">
+              <nav className="mt-3 space-y-1.5">
                 {visibleNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
@@ -348,30 +350,30 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium",
+                        "flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm sm:text-base font-bold transition-colors",
                         isActive
-                          ? "bg-rose-50 text-rose-700 font-semibold"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          ? "bg-rose-50 text-rose-700 font-extrabold"
+                          : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                       )}
                     >
-                      <Icon className="w-4 h-4" />
+                      <Icon className="w-5 h-5 shrink-0" />
                       <span>{t(item.key)}</span>
                     </Link>
                   );
                 })}
               </nav>
             </div>
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs sm:text-sm">
               <div className="flex flex-col">
-                <span className="font-semibold text-slate-800">{activeUserName}</span>
-                <span className="text-[10px] text-rose-600 font-bold">{activeRole}</span>
+                <span className="font-bold text-slate-900 text-sm">{activeUserName}</span>
+                <span className="text-xs text-rose-700 font-extrabold">{activeRole}</span>
               </div>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex items-center gap-1 text-slate-500 hover:text-rose-600 px-2 py-1 rounded bg-slate-50 hover:bg-rose-50"
+                className="flex items-center gap-1.5 text-slate-700 hover:text-rose-600 px-3 py-2 rounded-lg bg-slate-100 hover:bg-rose-50 font-bold transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
                 <span>{t("signOut")}</span>
               </button>
             </div>
@@ -381,7 +383,7 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
       )}
 
       {/* Main Content Area with Role Access Guard */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 overflow-y-auto pb-20 md:pb-0">
         <div className="max-w-[1440px] mx-auto p-4 sm:p-6 lg:p-8">
           {isAuthorized ? (
             children
@@ -409,6 +411,40 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
           )}
         </div>
       </main>
+      <BottomNav items={visibleNavItems} pathname={pathname} t={t} onMore={() => setMobileMenuOpen(true)} />
     </div>
   );
 };
+
+
+/** Phone navigation: four main destinations within thumb reach, everything else behind "More". */
+function BottomNav({ items, pathname, t, onMore }: {
+  items: NavItem[]; pathname: string; t: (k: any) => string; onMore: () => void;
+}) {
+  if (items.length < 2) return null;
+  const order = ["dashboard", "pos", "sales", "products"];
+  const main = order.map((k) => items.find((i) => i.key === k)).filter(Boolean) as NavItem[];
+  const showMore = items.length > main.length;
+  const cell = "flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[56px] text-xs";
+  return (
+    <nav aria-label="Main" className="md:hidden fixed bottom-0 inset-x-0 z-40 flex bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+      {main.map((item) => {
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const Icon = item.icon;
+        return (
+          <Link key={item.key} href={item.href} aria-current={active ? "page" : undefined}
+            className={`${cell} ${active ? "text-blue-700 font-medium" : "text-slate-600"}`}>
+            <Icon className="w-5 h-5" />
+            <span>{t(item.key)}</span>
+          </Link>
+        );
+      })}
+      {showMore && (
+        <button type="button" onClick={onMore} className={`${cell} text-slate-600`}>
+          <MoreHorizontal className="w-5 h-5" />
+          <span>More</span>
+        </button>
+      )}
+    </nav>
+  );
+}

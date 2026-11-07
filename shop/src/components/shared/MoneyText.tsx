@@ -43,8 +43,8 @@ export const MoneyText: React.FC<MoneyTextProps> = ({
   return (
     <span
       className={cn(
-        "tabular-nums font-medium text-slate-900 inline-block text-right",
-        isNeg && "text-danger",
+        "tabular-nums font-bold text-slate-900 inline-block text-right",
+        isNeg && "text-danger font-extrabold",
         className
       )}
       {...props}

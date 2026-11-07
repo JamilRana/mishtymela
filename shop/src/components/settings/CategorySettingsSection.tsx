@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { Tags, Plus, Trash2, Edit2, Check, X, AlertCircle } from "lucide-react";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/products";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useHydratedLanguage } from "@/stores/language";
+import { toBnDigits } from "@/lib/bangla-numbers";
 
 interface CategoryWithCount {
   id: string;
@@ -14,6 +16,9 @@ interface CategoryWithCount {
 export const CategorySettingsSection: React.FC<{
   categories: CategoryWithCount[];
 }> = ({ categories }) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -86,10 +91,12 @@ export const CategorySettingsSection: React.FC<{
         <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
           <div className="flex items-center gap-2">
             <Tags className="w-4 h-4 text-slate-500" />
-            <h2 className="text-sm font-semibold text-slate-900">Product Categories</h2>
+            <h2 className="text-sm font-semibold text-slate-900">
+              {isBn ? "মিষ্টি ও পণ্যের ক্যাটেগরি" : "Product Categories"}
+            </h2>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">
-            {categories.length} {categories.length === 1 ? "category" : "categories"}
+          <span className="text-xs text-slate-500 font-medium">
+            {isBn ? `${toBnDigits(categories.length)} টি ক্যাটেগরি` : `${categories.length} ${categories.length === 1 ? "category" : "categories"}`}
           </span>
         </div>
 
@@ -105,7 +112,7 @@ export const CategorySettingsSection: React.FC<{
           <input
             type="text"
             required
-            placeholder="New category name..."
+            placeholder={isBn ? "নতুন ক্যাটেগরির নাম..." : "New category name..."}
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
             className="flex-1 px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -116,14 +123,16 @@ export const CategorySettingsSection: React.FC<{
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
-            Add
+            <span>{isBn ? "যোগ করুন" : "Add"}</span>
           </button>
         </form>
 
         {/* Categories List */}
         <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
           {categories.length === 0 ? (
-            <p className="text-xs text-slate-400 py-4 text-center">No categories created yet.</p>
+            <p className="text-xs text-slate-400 py-4 text-center">
+              {isBn ? "কোন ক্যাটেগরি তৈরি করা হয়নি।" : "No categories created yet."}
+            </p>
           ) : (
             categories.map((cat) => {
               const isEditing = editingId === cat.id;
@@ -166,7 +175,7 @@ export const CategorySettingsSection: React.FC<{
                     <>
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-800">{cat.name}</span>
-                        <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.2 rounded font-medium">
+                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded font-medium">
                           {cat.productCount} {cat.productCount === 1 ? "item" : "items"}
                         </span>
                       </div>

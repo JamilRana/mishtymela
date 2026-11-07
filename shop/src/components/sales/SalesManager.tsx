@@ -27,7 +27,7 @@ import { Pagination } from "@/components/shared/Pagination";
 import { TableSkeleton } from "@/components/shared/Skeleton";
 import { recordSalePaymentAction, voidSaleAction, updateSaleAction } from "@/actions/sales";
 import { toBnDigits } from "@/lib/bangla-numbers";
-import { useLanguageStore } from "@/stores/language";
+import { useHydratedLanguage } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +104,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, language } = useLanguageStore();
+  const { t, language } = useHydratedLanguage();
 
   const isServerPaginated = totalCount !== undefined;
   const currentQ = searchParams.get("q") || "";
@@ -362,11 +362,11 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-800">বিক্রয় সময়কাল</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                <span className="px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-700">
                   {periodSummary?.label || "আজ"}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-xs text-slate-500">
                 ডিফল্টভাবে আজকের বিক্রয় প্রদর্শিত হচ্ছে
               </p>
             </div>
@@ -439,27 +439,27 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
         {/* Selected Period Metrics Strip */}
         {periodSummary && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2.5 border-t border-slate-100 text-xs">
-            <div className="p-2 bg-slate-50 rounded border border-slate-100">
-              <span className="text-[10px] text-slate-500 block uppercase font-medium">মোট বিক্রয়</span>
-              <span className="font-bold text-slate-900 text-sm font-mono">
+            <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
+              <span className="text-xs text-slate-500 block uppercase font-medium">মোট বিক্রয়</span>
+              <span className="font-bold text-slate-900 text-sm font-mono mt-0.5 block">
                 <MoneyText amount={periodSummary.totalRevenue} />
               </span>
             </div>
-            <div className="p-2 bg-emerald-50/60 rounded border border-emerald-100">
-              <span className="text-[10px] text-emerald-700 block uppercase font-medium">মোট আদায় (নগদ/ডিজিটাল)</span>
-              <span className="font-bold text-emerald-800 text-sm font-mono">
+            <div className="p-2.5 bg-emerald-50/60 rounded border border-emerald-100">
+              <span className="text-xs text-emerald-700 block uppercase font-medium">মোট আদায় (নগদ/ডিজিটাল)</span>
+              <span className="font-bold text-emerald-800 text-sm font-mono mt-0.5 block">
                 <MoneyText amount={periodSummary.totalPaid} />
               </span>
             </div>
-            <div className="p-2 bg-amber-50/60 rounded border border-amber-100">
-              <span className="text-[10px] text-amber-700 block uppercase font-medium">বাকি / ক্রেডিট (Due)</span>
-              <span className="font-bold text-amber-800 text-sm font-mono">
+            <div className="p-2.5 bg-amber-50/60 rounded border border-amber-100">
+              <span className="text-xs text-amber-700 block uppercase font-medium">বাকি / ক্রেডিট (Due)</span>
+              <span className="font-bold text-amber-800 text-sm font-mono mt-0.5 block">
                 <MoneyText amount={periodSummary.totalDue} />
               </span>
             </div>
-            <div className="p-2 bg-slate-50 rounded border border-slate-100">
-              <span className="text-[10px] text-slate-500 block uppercase font-medium">মোট ইনভয়েস</span>
-              <span className="font-bold text-slate-800 text-sm font-mono">
+            <div className="p-2.5 bg-slate-50 rounded border border-slate-100">
+              <span className="text-xs text-slate-500 block uppercase font-medium">মোট ইনভয়েস</span>
+              <span className="font-bold text-slate-800 text-sm font-mono mt-0.5 block">
                 {toBnDigits(totalCount || 0)} টি
               </span>
             </div>
@@ -498,10 +498,10 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
       {isPending ? (
         <TableSkeleton rows={8} cols={8} />
       ) : (
-        <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
-          <table className="w-full text-left text-xs">
+        <div className="bg-white border border-slate-200 rounded-md overflow-x-auto shadow-xs">
+          <table className="w-full min-w-[780px] text-left text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-xs tracking-wider font-semibold">
                 <th className="py-3 px-4">{t("invoiceNo")}</th>
                 <th className="py-3 px-4">{t("date")}</th>
                 <th className="py-3 px-4">{t("customer")}</th>
@@ -616,7 +616,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                       {invoiceLang === "bn" ? "ইনভয়েস:" : "Invoice:"}{" "}
                       <span className="font-mono text-blue-600">{selectedSale.invoiceNo}</span>
                     </Dialog.Title>
-                    <Dialog.Description className="text-[11px] text-slate-500">
+                    <Dialog.Description className="text-xs text-slate-500">
                       {selectedSale.customerName} • <DateTimeText date={selectedSale.createdAt} />
                     </Dialog.Description>
                   </div>
@@ -633,7 +633,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   {/* Language Switcher (Bangla default) */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-slate-500">
+                    <span className="text-xs font-semibold text-slate-500">
                       {invoiceLang === "bn" ? "রসিদের ভাষা:" : "Receipt Language:"}
                     </span>
                     <div className="inline-flex rounded-md border border-slate-200 p-0.5 bg-white">
@@ -716,7 +716,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                       <Edit3 className="w-4 h-4 text-amber-700" />
                       <span>{invoiceLang === "bn" ? "ইনভয়েসের তথ্য পরিবর্তন" : "Change Invoice Details"}</span>
                     </span>
-                    <span className="text-[11px] font-normal text-amber-700">
+                    <span className="text-xs font-normal text-amber-700">
                       {invoiceLang === "bn" ? "অ্যাডমিন অনুমতি" : "Admin Permission"}
                     </span>
                   </div>
@@ -794,28 +794,28 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
               {/* Printable Thermal Receipt Paper Container */}
               <div
                 id="invoice-printable"
-                className="my-3 max-w-[78mm] mx-auto p-4 bg-white border border-dashed border-slate-300 rounded text-slate-900 font-mono text-xs select-text box-border"
+                className="my-3 max-w-[78mm] mx-auto p-4 bg-white border border-dashed border-slate-300 rounded text-slate-900 font-mono text-sm select-text box-border"
               >
                 {/* Shop Official Branding Header */}
                 <div className="text-center pb-2 border-b border-dashed border-slate-300">
-                  <h2 className="font-bold text-sm text-slate-900 uppercase">
+                  <h2 className="font-bold text-base text-slate-900 uppercase">
                     {activeShop.name}
                   </h2>
                   {activeShop.address && (
-                    <p className="text-[10px] text-slate-600 mt-0.5">{activeShop.address}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{activeShop.address}</p>
                   )}
                   {activeShop.phone && (
-                    <p className="text-[10px] text-slate-600 font-mono">
+                    <p className="text-xs text-slate-600 font-mono">
                       {invoiceLang === "bn" ? "মোবাইল: " : "Phone: "}
                       {invoiceLang === "bn" ? toBnDigits(activeShop.phone) : activeShop.phone}
                     </p>
                   )}
                   {activeShop.vatNumber && (
-                    <p className="text-[9px] text-slate-400 font-mono">
+                    <p className="text-xs text-slate-500 font-mono">
                       {invoiceLang === "bn" ? toBnDigits(activeShop.vatNumber) : activeShop.vatNumber}
                     </p>
                   )}
-                  <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-[10px] text-slate-600">
+                  <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-xs text-slate-600">
                     <span className="font-semibold font-mono">
                       {invoiceLang === "bn" ? toBnDigits(selectedSale.invoiceNo) : selectedSale.invoiceNo}
                     </span>
@@ -824,7 +824,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </div>
 
                 {/* Customer Info if applicable */}
-                <div className="py-1 text-[11px] border-b border-dashed border-slate-300 flex justify-between">
+                <div className="py-1.5 text-xs sm:text-sm border-b border-dashed border-slate-300 flex justify-between">
                   <span className="text-slate-500">{invoiceLang === "bn" ? "ক্রেতার নাম:" : "Customer:"}</span>
                   <span className="font-semibold">
                     {selectedSale.customerName || (invoiceLang === "bn" ? "খুচরা ক্রেতা" : "Walk-in Customer")}
@@ -832,18 +832,18 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </div>
 
                 {/* Line Items */}
-                <div className="py-2 border-b border-dashed border-slate-300 space-y-1">
-                  <div className="flex justify-between font-bold text-[10px] text-slate-500 uppercase">
+                <div className="py-2 border-b border-dashed border-slate-300 space-y-1.5">
+                  <div className="flex justify-between font-bold text-xs text-slate-600 uppercase">
                     <span>{invoiceLang === "bn" ? "আইটেম" : "Item"}</span>
                     <span>{invoiceLang === "bn" ? "পরিমাণ x দর" : "Qty x Rate"}</span>
                     <span>{invoiceLang === "bn" ? "মোট" : "Total"}</span>
                   </div>
                   {selectedSale.items.map((it) => (
-                    <div key={it.id} className="flex justify-between items-baseline text-[11px]">
+                    <div key={it.id} className="flex justify-between items-baseline text-xs sm:text-sm">
                       <div className="truncate max-w-[130px] font-sans">
                         {it.productName}
                       </div>
-                      <div className="text-[10px] text-slate-600 font-mono">
+                      <div className="text-xs text-slate-600 font-mono">
                         {invoiceLang === "bn" ? toBnDigits(it.quantity) : it.quantity} x {formatMoney(it.unitPrice, invoiceLang)}
                       </div>
                       <div className="font-semibold font-mono">{formatMoney(it.lineTotal, invoiceLang)}</div>
@@ -852,7 +852,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </div>
 
                 {/* Calculation Breakdown */}
-                <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5 text-[11px]">
+                <div className="py-2 border-b border-dashed border-slate-300 space-y-1 text-xs sm:text-sm">
                   <div className="flex justify-between text-slate-600">
                     <span>{invoiceLang === "bn" ? "উপমোট (সাবটোটাল):" : "Subtotal:"}</span>
                     <span className="font-mono">{formatMoney(selectedSale.subtotal, invoiceLang)}</span>
@@ -863,7 +863,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                       <span className="font-mono">-{formatMoney(selectedSale.discount, invoiceLang)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-slate-900 text-xs pt-1 border-t border-slate-200">
+                  <div className="flex justify-between font-bold text-slate-900 text-sm sm:text-base pt-1 border-t border-slate-200">
                     <span>{invoiceLang === "bn" ? "সর্বমোট বিল:" : "Total Amount:"}</span>
                     <span className="font-mono font-bold text-slate-900">{formatMoney(selectedSale.total, invoiceLang)}</span>
                   </div>
@@ -880,7 +880,7 @@ export const SalesManager: React.FC<SalesManagerProps> = ({
                 </div>
 
                 {/* Receipt Footer Message */}
-                <div className="pt-2 text-center text-[10px] text-slate-500">
+                <div className="pt-2 text-center text-xs text-slate-600">
                   <p>{activeShop.receiptFooter || "স্বাদে ও ঐতিহ্যে অনন্য • ধন্যবাদ আবার আসবেন!"}</p>
                 </div>
               </div>

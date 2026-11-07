@@ -9,11 +9,13 @@ interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description: React.ReactNode;
   confirmLabel?: string;
+  confirmText?: string;
   cancelLabel?: string;
   variant?: "danger" | "primary";
   isLoading?: boolean;
+  loading?: boolean;
   onConfirm: () => void | Promise<void>;
 }
 
@@ -22,12 +24,16 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
+  confirmLabel,
+  confirmText,
   cancelLabel = "Cancel",
   variant = "danger",
   isLoading = false,
+  loading = false,
   onConfirm,
 }) => {
+  const actualConfirmLabel = confirmLabel || confirmText || "Confirm";
+  const actualLoading = isLoading || loading;
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -65,7 +71,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
-              disabled={isLoading}
+              disabled={actualLoading}
               onClick={() => onOpenChange(false)}
               className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:ring-2 focus:ring-slate-300 focus:outline-none transition-colors"
             >
@@ -73,7 +79,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </button>
             <button
               type="button"
-              disabled={isLoading}
+              disabled={actualLoading}
               onClick={async () => {
                 await onConfirm();
                 onOpenChange(false);
@@ -83,10 +89,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 variant === "danger"
                   ? "bg-rose-600 hover:bg-rose-700 focus:ring-rose-500"
                   : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500",
-                isLoading && "opacity-50 cursor-not-allowed"
+                actualLoading && "opacity-50 cursor-not-allowed"
               )}
             >
-              {isLoading ? "Processing..." : confirmLabel}
+              {actualLoading ? "Processing..." : actualConfirmLabel}
             </button>
           </div>
         </Dialog.Content>

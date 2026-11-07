@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { createCategory, updateCategory, deleteCategory } from "@/actions/products";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { useHydratedLanguage } from "@/stores/language";
 import { cn } from "@/lib/utils";
 
 export interface CategoryWithCount {
@@ -35,6 +36,9 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   onOpenChange,
   onCategoryCreated,
 }) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -121,10 +125,10 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 </div>
                 <div>
                   <Dialog.Title className="text-base font-semibold text-slate-900">
-                    Manage Product Categories
+                    {isBn ? "মিষ্টি ও পণ্যের ক্যাটেগরি পরিচালনা" : "Manage Product Categories"}
                   </Dialog.Title>
                   <Dialog.Description className="text-xs text-slate-500">
-                    Add, rename, or remove categories dynamically
+                    {isBn ? "ক্যাটেগরি যোগ, নাম পরিবর্তন বা মুছে ফেলুন" : "Add, rename, or remove categories dynamically"}
                   </Dialog.Description>
                 </div>
               </div>
@@ -147,7 +151,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder="New category name (e.g. Beverages, Spices, Bakery)..."
+                placeholder={isBn ? "নতুন ক্যাটেগরির নাম (যেমন: রসগোল্লা, সন্দেশ, দই)..." : "New category name (e.g. Beverages, Spices, Bakery)..."}
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -158,7 +162,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50 flex items-center gap-1.5 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Add Category
+                <span>{isBn ? "ক্যাটেগরি যোগ" : "Add Category"}</span>
               </button>
             </form>
 
@@ -166,7 +170,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             <div className="mt-4 flex-1 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-md">
               {categories.length === 0 ? (
                 <div className="p-8 text-center text-xs text-slate-400">
-                  No categories created yet. Add your first category above!
+                  {isBn ? "কোন ক্যাটেগরি তৈরি করা হয়নি।" : "No categories created yet. Add your first category above!"}
                 </div>
               ) : (
                 categories.map((c) => {
@@ -213,7 +217,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                               {c.name}
                             </span>
                             {c.productCount !== undefined && (
-                              <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium shrink-0">
+                              <span className="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-medium shrink-0">
                                 {c.productCount} {c.productCount === 1 ? "product" : "products"}
                               </span>
                             )}
@@ -252,7 +256,7 @@ export const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                 onClick={() => onOpenChange(false)}
                 className="px-4 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
               >
-                Close
+                {isBn ? "বন্ধ করুন" : "Close"}
               </button>
             </div>
           </Dialog.Content>

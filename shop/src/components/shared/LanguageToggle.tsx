@@ -33,7 +33,7 @@ export const LanguageToggle: React.FC<{ className?: string }> = ({ className }) 
         type="button"
         onClick={() => setLanguage("bn")}
         className={cn(
-          "px-2 py-0.8 rounded text-[11px] transition-all",
+          "px-2.5 py-1 rounded text-xs transition-all",
           language === "bn"
             ? "bg-rose-600 text-white shadow-xs font-bold"
             : "text-slate-600 hover:text-slate-900"
@@ -45,7 +45,7 @@ export const LanguageToggle: React.FC<{ className?: string }> = ({ className }) 
         type="button"
         onClick={() => setLanguage("en")}
         className={cn(
-          "px-2 py-0.8 rounded text-[11px] transition-all",
+          "px-2.5 py-1 rounded text-xs transition-all",
           language === "en"
             ? "bg-slate-900 text-white shadow-xs font-bold"
             : "text-slate-600 hover:text-slate-900"

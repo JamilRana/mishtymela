@@ -1,5 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#1e293b",
+};
 
 export const metadata: Metadata = {
   title: "মিষ্টি মেলা (Mishty Mela) | ত্রিশাল - ঐতিহ্যবাহী মিষ্টি ও দই",
@@ -13,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased bg-slate-50 text-slate-900 min-h-screen">
+    <html lang="bn">
+      <body className="antialiased bg-slate-50 text-slate-900 min-h-screen selection:bg-blue-600 selection:text-white">
         {children}
       </body>
     </html>

@@ -13,12 +13,15 @@
 2. [Technology Stack](#2-technology-stack)
 3. [Project Directory Structure](#3-project-directory-structure)
 4. [Database Architecture & Prisma Schema](#4-database-architecture--prisma-schema)
+   - 4.1 [Neon Serverless PostgreSQL Resilience & Connection Pooling](#41-neon-serverless-postgresql-resilience--connection-pooling)
 5. [Role-Based Access Control (RBAC)](#5-role-based-access-control-rbac)
 6. [Bilingual Architecture & Hydration Safety](#6-bilingual-architecture--hydration-safety)
 7. [Dynamic Shop Profile & System-Wide Propagation](#7-dynamic-shop-profile--system-wide-propagation)
 8. [Sweet Shop Inventory & Non-Sellable Items Management](#8-sweet-shop-inventory--non-sellable-items-management)
+   - 8.1 [Product Lifecycle & Complete CRUD Management](#81-product-lifecycle--complete-crud-management)
 9. [POS Terminal & Sales-Linked Packaging](#9-pos-terminal--sales-linked-packaging)
 10. [Sales Ledger, Receipts & Printing Architecture](#10-sales-ledger-receipts--printing-architecture)
+    - 10.3 [High-Legibility Counter Typography & Thermal Print Scale](#103-high-legibility-counter-typography--thermal-print-scale)
 11. [Finance, Cash Drawers & Multi-Account Ledgers](#11-finance-cash-drawers--multi-account-ledgers)
 12. [Date & Month Financial Reporting (P&L Accounting)](#12-date--month-financial-reporting-pl-accounting)
 13. [Setup, Environment Variables & Deployment](#13-setup-environment-variables--deployment)
@@ -217,6 +220,18 @@ erDiagram
 - **`Sale` & `SaleItem`**: Stores invoice numbers (`INV-000001`), customer names, subtotal, discount, total, paid, idempotency keys, and item snapshot costs.
 - **`Account` & `Transaction`**: Double-entry financial records representing physical cash drawers, mobile wallets (bKash/Nagad), and bank accounts.
 
+### 4.1 Neon Serverless PostgreSQL Resilience & Connection Pooling
+
+Neon dynamically puts idle serverless compute endpoints into sleep (auto-suspend) to conserve resources. When the application receives a request after inactivity, the compute endpoint takes 2–4 seconds to wake up.
+
+To ensure production reliability without connection drops:
+1. **Connection String Timeouts (`shop/.env`):**
+   - The pooled database URL includes `connect_timeout=30&pool_timeout=30`. By default, Prisma times out after 5 seconds; 30 seconds provides sufficient headroom for Neon compute wake-up during cold starts.
+   - For pooled connections (`-pooler...neon.tech`), `channel_binding=require` is omitted because PgBouncer connection poolers can fail TLS SCRAM channel binding negotiations when re-authenticating pooled connections.
+2. **Transient Connection Retry Utility ([`withDbRetry`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/lib/prisma.ts#L22-L55) in [`src/lib/prisma.ts`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/lib/prisma.ts)):**
+   - Server actions and data-fetching pages ([`getAccounts`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/actions/finance.ts#L9-L33), [`getTxCategories`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/actions/finance.ts#L35-L43), [`getTransactions`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/actions/finance.ts#L104-L135), and [`FinancePage`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/app/(admin)/finance/page.tsx#L22-L30)) are wrapped with [`withDbRetry`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/lib/prisma.ts#L22-L55).
+   - Automatically intercepts transient network errors (`P1001` - Can't reach database server, `P1002` - Timed out, `P1017` - Connection closed, pool timeouts) and performs automatic retries with backoff, ensuring cold-start bursts never crash page views.
+
 ---
 
 ## 5. Role-Based Access Control (RBAC)
@@ -249,6 +264,11 @@ The system features complete internationalization (i18n) designed to run primari
 Two typed dictionaries implement the `TranslationDictionary` interface:
 - **`bnTranslations`**: Complete Bengali translations for sweet shop vocabulary, POS actions, receipt headers, and financial terms.
 - **`enTranslations`**: English counterpart translations.
+
+### System-Wide Localization Coverage
+1. **Dynamic Page Titles & Headers ([`PageHeader.tsx`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/components/shared/PageHeader.tsx)):** Client-side reactive header automatically detects active language and maps module titles and subtitles (Dashboard, Products, Sales, Inventory, Finance, Reports, Settings) seamlessly between বাংলা and English.
+2. **Table Column Headers & Actions:** Data tables across `/products`, `/inventory`, `/finance`, `/sales`, and `/dashboard` render native Bengali headers (`পণ্য ও SKU`, `ক্যাটেগরি`, `বিক্রয় মূল্য`, `মজুদ পরিমাণ`, `তারিখ ও সময়`, `টাকার পরিমাণ`, `অবস্থা`, `অ্যাকশন`) when বাংলা is active.
+3. **Interactive Buttons & Dialogs:** All filter selects, search placeholders, action buttons (`নতুন পণ্য`, `মালামাল রিসিভ`, `খরচ লিখুন`, `আয় লিখুন`, `মুছে ফেলুন`), and confirmation modals dynamically reflect the selected language.
 
 ### Hydration Safety Architecture
 Next.js SSR can cause hydration mismatches when client components read `localStorage` on initial render. This system prevents mismatches through dedicated hydration-safe hooks:
@@ -328,6 +348,24 @@ Raw materials cannot be sold at the cash register. They are converted in the kit
 2. **Auto-Calculated Complimentary Allocation:** Adding sweets to the cart automatically suggests matching sweet boxes ($1\text{ kg}$, $0.5\text{ kg}$) based on sweet weight.
 3. **Zero Billing with Live Stock Tracking:** The customer is charged **৳০.০০** for the box. Upon checkout, the sweet box inventory count is atomically decremented.
 
+### 8.1 Product Lifecycle & Complete CRUD Management
+
+The product management interface ([`/products`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/app/(admin)/products/page.tsx)) provides full lifecycle management across Retail Sweets, Raw Materials, and Packaging Items:
+
+1. **Create Product ([`createProduct`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/actions/products.ts#L205-L245)):**
+   - Captured attributes: SKU, barcode, title/name, category assignment, product type (`RETAIL`, `RAW_MATERIAL`, `PACKAGING`), unit of measure (`kg`, `pot`, `liter`, `pcs`, `box`), selling price, unit cost, and low-stock reorder threshold.
+   - Validation enforced via Zod schema with server-side validation.
+2. **Read & Real-Time Inventory Overview ([`ProductsTable.tsx`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/components/products/ProductsTable.tsx)):**
+   - Interactive table with category filter tabs, SKU search, live inventory balance, cost price vs. retail price, profit markup indicator, and status badges.
+3. **Update Product ([`updateProduct`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/actions/products.ts#L250-L300)):**
+   - Modal-driven editing via [`ProductFormModal.tsx`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/components/products/ProductFormModal.tsx) supporting both Create and Edit modes.
+   - Pre-populates all existing data, displays current physical stock as a read-only reference, and allows modifying names, categories, types, pricing, and reorder levels.
+   - Updates propagate immediately across Next.js Server Components via `revalidatePath("/products")`.
+4. **Delete Product & Referential Integrity Safeguards ([`deleteProduct`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/actions/products.ts#L305-L355)):**
+   - Deletion is protected with a red confirmation dialog in [`ProductsTable.tsx`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/components/products/ProductsTable.tsx) to prevent accidental triggers.
+   - **Audit Safety Rule:** Before deleting, the system inspects `SaleItem` records. If the product has ever been sold on any invoice, deletion is hard-blocked with a friendly business error message (`এই পণ্যের বিক্রির হিস্ট্রি রয়েছে, এটি মুছে ফেলা যাবে না...`). This prevents breaking accounting ledgers, receipt reprints, and historical profit reports.
+   - If stock movements exist without sales, associated movement records are cleaned up before removing the product record.
+
 ---
 
 ## 9. POS Terminal & Sales-Linked Packaging
@@ -349,6 +387,7 @@ The POS terminal ([`PosTerminal.tsx`](file:///home/orion/Documents/Projects/shop
 - Displays invoice history, customer name, total, amount paid, and outstanding balance due.
 - Status badges: Fully Paid (Green), Due Balance (Amber), Voided (Rose).
 - **Payment Collection Modal:** Allows collecting subsequent installment payments on credit sales, updating balances in real time.
+- **POS Change-Giving & Payment Allocation:** At checkout (`createSale`), customer tendered cash may exceed the invoice total. The system calculates change given for the cashier counter, while capping the recorded `paid` field at `total` (preventing negative balances or invalid credits). Subsequent credit collections (`recordSalePayment`) reject amounts exceeding the outstanding due balance.
 - **Atomic Voiding:** Voiding a sale restores all items (sweets and boxes) back to inventory and reverses linked income transactions.
 
 ### B. Print Media Engine ([`globals.css`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/app/globals.css))
@@ -378,20 +417,104 @@ The application features specialized CSS print media queries ensuring clean outp
 }
 ```
 
+### C. High-Legibility Counter Typography & Thermal Print Scale
+
+Retail counters and commercial kitchens require high contrast and readability from a distance:
+1. **Extended Tailwind Font Scaling ([`shop/tailwind.config.ts`](file:///home/orion/Documents/Projects/shop-management-core/shop/tailwind.config.ts)):**
+   - Configured custom font sizes: `xs: "13px"`, `sm: "14px"`, `2xs: "12px"`.
+   - Replaced illegible micro-text (`text-[9px]`, `text-[10px]`, `text-[11px]`) across 20+ interface screens with accessible, standard-sized labels.
+2. **Thermal Receipt Sizing ([`shop/src/app/globals.css`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/app/globals.css)):**
+   - Thermal receipt typography is set to `13px` base font with `font-mono` numerals, ensuring clean thermal head burn and sharp readability on both 58mm and 80mm ESC/POS hardware.
+
 ---
 
-## 11. Finance, Cash Drawers & Multi-Account Ledgers
+## 11. Finance, Treasury & Daily Cash Reconciliation
 
-The finance module ([`/finance`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/app/(admin)/finance/page.tsx)) operates on multi-account balances:
+The Finance module ([`/finance`](file:///home/orion/Documents/Projects/shop-management-core/shop/src/app/(admin)/finance/page.tsx)) provides multi-account ledgering, neutral transfers, and end-of-day cash reconciliation with immutable cutoff guarantees.
 
-1. **Cash Drawer (ক্যাশ কাউন্টার):** Tracks physical cash tendered at the POS.
-2. **bKash / Mobile Wallet (বিকাশ / নগদ মার্চেন্ট):** Tracks digital QR / USSD customer payments.
-3. **Bank Account (ব্যাংক হিসাব):** Tracks direct card/bank transfers and supplier purchase disbursements.
+### 11.1 Account Architecture & Multi-Account Ledgers
+The system segregates funds across designated financial accounts (`AccountType` enum):
+1. **Cash Drawer (`CASH`):** Physical cash drawer at the POS counter (ক্যাশ কাউন্টার). POS cash sales deposit here; counter expenses disburse from here.
+2. **Mobile Banking (`MOBILE_BANKING`):** Digital merchant wallets (e.g., bKash, Nagad) for QR and digital customer payments.
+3. **Bank Account (`BANK`):** Commercial bank accounts used for card payments, large vendor purchases, and deposits.
+4. **Safe / Vault (`SAFE`):** High-security shop vault / safe (লকার / সেফ) for overnight cash storage.
+5. **Owner Capital (`OWNER`):** Owner's equity/drawings account (মালিকের মূলধন / ড্রয়িংস) for cash injections or drawings.
 
-### Transaction Sources
-- **`SALE`**: System-generated income from POS sales.
-- **`PURCHASE`**: System-generated disbursements for inventory purchases.
-- **`MANUAL`**: Manual operating income (e.g. supplier rebate) and overhead expenses (rent, electricity, gas, staff salaries).
+> [!NOTE]
+> POS tenders and sales can only be booked into POS-accessible accounts (`CASH`, `BANK`, `MOBILE_BANKING`). `SAFE` and `OWNER` accounts are restricted to treasury transfers and day opening/closing adjustments.
+
+### 11.2 Neutral Transfers
+Moving money between accounts (e.g., depositing counter cash into the bank, or transferring excess cash to the safe) is handled via `transferFunds`:
+- **Dual-Row Balanced Double Entry:** Generates an `EXPENSE` transaction on the source account and an `INCOME` transaction on the destination account with source `TRANSFER`.
+- **Shared Reference:** Both rows share an identical `transferId` (UUID) for auditing.
+- **Strictly P&L Neutral:** Transfers are excluded from Profit & Loss operating revenue and operating expense calculations.
+- **Overdraft Guard:** Using PostgreSQL `SELECT ... FOR UPDATE` row-level locks, transfers ensure the source account has sufficient funds (`balance >= amount`).
+- **User Attribution:** Both entries record `createdById` to track who executed the transfer.
+
+### 11.3 Daily Cash Reconciliation Cycle
+
+```mermaid
+flowchart TD
+    A["Night / Morning: Closed Day"] -->|"Count Float & Open Day"| B["DaySession: OPEN"]
+    B -->|"POS Sales & Operations"| C["Continuous Ledger Activity"]
+    B -->|"Mid-Day Neutral Transfers"| D["Safe / Bank Transfers"]
+    C --> E["End of Shift / Day"]
+    E -->|"Prepare Closing (Fingerprint & Variance Check)"| F["Close Day Wizard (5 Steps)"]
+    F -->|"Count Physical Cash Denominations"| G{"Variance = 0?"}
+    G -->|"Yes"| H["Close Day Session"]
+    G -->|"No (Discrepancy)"| I["Require Reason + Owner/Admin Password"]
+    I -->|"Book CLOSING_ADJUSTMENT"| H
+    H -->|"Snapshot Balances + Set booksClosedThrough"| J["DaySession: CLOSED (Cutoff Locked)"]
+    J -.->|"Owner Reopen (If Error Discovered)"| B
+```
+
+#### Step 1: Opening the Day (`openDay`)
+- Only **one active open session** is allowed per organization enforced by PostgreSQL partial unique index (`WHERE status = 'OPEN'`).
+- The user declares the opening cash float (`openingCash`).
+- **Float Discrepancy Transfer:** If opening cash differs from the previous session's closing cash, the system requires specifying a destination account (`SAFE` or `OWNER`). The difference is automatically balanced via a neutral ledger transfer.
+
+#### Step 2: Mid-Day Trading & Non-Blocking POS
+- Cashiers can ring up sales continuously at the POS.
+- If the day session is not yet opened, the POS displays a non-blocking warning banner: *"আজকের দিনটি এখনও ওপেন করা হয়নি। অনুগ্রহ করে ম্যানেজার বা ওনারকে দিনটি ওপেন করতে বলুন।"* Sales can still proceed normally without blocking customer service.
+
+#### Step 3: Day Closing Wizard (`prepareClosing` & `closeDay`)
+At the end of trading, managers complete a 5-step closing wizard:
+1. **System Expected Summary:** Displays opening cash float, total POS cash sales, digital collections, expenses, and expected closing cash drawer balance.
+2. **Physical Denomination Calculator:** Interactive counter for Bangladeshi Taka notes (৳1000, ৳500, ৳200, ৳100, ৳50, ৳20, ৳10, ৳5, ৳2, ৳1) computing total physical cash automatically.
+3. **Variance Reconciliation:**
+   - Compares physical counted cash vs. system expected cash.
+   - If variance is 0, no adjustment is required.
+   - If variance $\neq 0$ (shortage or excess), the system requires an explanatory reason and **Owner or Admin authentication** (re-verifying bcrypt password). An automated `CLOSING_ADJUSTMENT` transaction is booked to the "ক্যাশ পার্থক্য (উদ্বৃত্ত)" (Income) or "ক্যাশ পার্থক্য (ঘাটতি)" (Expense) category.
+4. **Closing Snapshot & Cutoff Lock:**
+   - Locks the `DaySession` as `CLOSED`.
+   - Snapshots all account balances in `DayAccountClosing`.
+   - Sets `organization.booksClosedThrough` to `closedAt`.
+   - After closure, the cash account ledger balance **identically matches** the counted cash.
+5. **Printable Closing Slip:** Generates a thermal-friendly summary slip detailing opening cash, gross sales, expenses, closing cash, and variance approvals.
+
+#### Step 4: Cutoff Protection (`booksClosedThrough`)
+- All write paths (`sales`, `finance`, `inventory`, `transfers`) execute `assertPostingAllowed(tx, orgId, occurredAt)`.
+- Any attempt to post, edit, or backdate a transaction prior to or equal to `booksClosedThrough` is rejected with: *"Cannot post transaction: books are closed through [date]"*.
+
+#### Step 5: Post-Close Voiding / Refund Handling
+- If a customer returns an item from a closed trading day:
+  - The historical sale status remains `COMPLETED` to preserve the integrity of past closed statements and financial records.
+  - The system creates a compensatory `REFUND` expense transaction dated *now* (`source = REFUND, type = EXPENSE`), restoring the inventory items into stock without altering closed history.
+
+#### Step 6: Reopening a Closed Day (`reopenLastDay`)
+- If an emergency correction is needed, an **Owner** can reopen the latest closed day.
+- Reopening rolls back `booksClosedThrough` to the previous closed day's cutoff, voids any `CLOSING_ADJUSTMENT` transactions generated during that close, clears closing snapshots, and sets the session back to `OPEN`.
+
+### 11.4 User Attribution Across All Transactions & Statements
+Every transaction, sale, session opening/closing, and audit log records user attribution:
+- `createdById` / `createdBy`: References the authenticated `User` (`name`, `email`, `role`).
+- The 3-tab Finance UI displays a dedicated user attribution badge on every transaction and account statement row.
+
+### 11.5 3-Tab Finance Interface
+The `/finance` route presents three comprehensive views:
+1. **Today's Cash (`/finance?tab=daily`):** Active day session monitor, cash drawer expected vs counted breakdown, mid-day neutral transfer launcher, and close-day wizard.
+2. **Transactions (`/finance?tab=transactions`):** Multi-filter transaction journal showing date, account, category, type, source (`SALE`, `PURCHASE`, `MANUAL`, `TRANSFER`, `CLOSING_ADJUSTMENT`, `REFUND`), user badge, and amount.
+3. **Statement (`/finance?tab=statement`):** Account-specific ledger statement featuring scalar opening balances, date range selector, chronological running balance calculation, user attribution, and CSV download.
 
 ---
 
@@ -436,8 +559,10 @@ npm install
 Create a `.env` file in the `shop` directory:
 ```env
 # Neon PostgreSQL Connection URLs
-DATABASE_URL="postgresql://[user]:[password]@[neon-host]/[dbname]?sslmode=require&pgbouncer=true&connect_timeout=15"
-DIRECT_URL="postgresql://[user]:[password]@[neon-host]/[dbname]?sslmode=require&connect_timeout=15"
+# Pooled URL for application runtime (with 30s timeout for cold-start tolerance)
+DATABASE_URL="postgresql://[user]:[password]@[neon-pooler-host]/[dbname]?sslmode=require&connect_timeout=30&pool_timeout=30"
+# Direct URL for Prisma migrations
+DIRECT_URL="postgresql://[user]:[password]@[neon-direct-host]/[dbname]?sslmode=require&connect_timeout=30"
 
 # Environment
 NODE_ENV="development"
@@ -472,7 +597,7 @@ npm run build
 
 ## 14. Server Actions & Service Reference
 
-| Server Action | File Location | Description |
+| Server Action / Utility | File Location | Description |
 | :--- | :--- | :--- |
 | `createSaleAction` | `src/actions/sales.ts` | Atomically completes sale, allocates packaging boxes, deducts stock, posts income |
 | `voidSaleAction` | `src/actions/sales.ts` | Reverses sale, restores inventory stock, voids linked revenue |
@@ -482,7 +607,19 @@ npm run build
 | `reportWastageAction` | `src/actions/inventory.ts` | Deducts spoiled/damaged raw material or sweet from inventory |
 | `receiveStockAction` | `src/actions/inventory.ts` | Records supplier purchase and updates weighted-average cost |
 | `getProducts` | `src/actions/products.ts` | Fetches products with optional `{ sellableOnly: true }` filter |
+| `createProduct` | `src/actions/products.ts` | Creates a new product with SKU, pricing, unit, and alert thresholds |
+| `updateProduct` | `src/actions/products.ts` | Updates product details, category, type, price, and reorder levels |
+| `deleteProduct` | `src/actions/products.ts` | Safely removes product after verifying no sales history exists |
 | `getPackagingBoxes` | `src/actions/products.ts` | Returns active sweet packaging boxes for POS checkout |
 | `getOrganizationAction` | `src/actions/organization.ts` | Retrieves live organization profile for invoices and receipts |
 | `updateOrganizationAction` | `src/actions/organization.ts` | Updates shop name, address, BIN, footer note, and revalidates paths |
 | `getDateRangeReportAction` | `src/actions/reports.ts` | Computes revenue, COGS, profit margins, and purchase ledgers |
+| `getTreasuryOverviewAction` | `src/actions/treasury.ts` | Fetches active day session, previous close, today's cash summary, and balances |
+| `openDayAction` | `src/actions/treasury.ts` | Opens daily session with initial cash float and optional difference transfer |
+| `transferFundsAction` | `src/actions/treasury.ts` | Executes atomic, neutral funds transfer between accounts with overdraft protection |
+| `prepareClosingAction` | `src/actions/treasury.ts` | Computes system expected cash, sales breakdown, cashier performance, and fingerprint |
+| `closeDayAction` | `src/actions/treasury.ts` | Reconciles physical count, verifies manager/owner credentials for variance, books adjustment, and locks cutoff date |
+| `reopenLastDayAction` | `src/actions/treasury.ts` | Reopens latest closed trading day and restores prior cutoff (Owner only) |
+| `getAccountStatementAction` | `src/actions/treasury.ts` | Generates statement with running balance, scalar opening balance, and user attribution |
+| `getSessionStatusAction` | `src/actions/treasury.ts` | Lightweight session status check for POS terminal banner |
+| `withDbRetry` | `src/lib/prisma.ts` | Transparent query wrapper retrying transient Neon cold-start connection errors |

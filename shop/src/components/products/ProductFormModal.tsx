@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Plus, AlertCircle } from "lucide-react";
-import { createProduct, createCategory } from "@/actions/products";
+import { createProduct, updateProduct, createCategory } from "@/actions/products";
+import { useHydratedLanguage } from "@/stores/language";
+import type { ProductItem } from "./ProductsTable";
 
 interface Category {
   id: string;
@@ -14,13 +16,20 @@ interface ProductFormModalProps {
   categories: Category[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  product?: ProductItem | null;
+  onSuccess?: () => void;
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   categories,
   open,
   onOpenChange,
+  product = null,
+  onSuccess,
 }) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +56,41 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   useEffect(() => {
     setLocalCategories(categories);
   }, [categories]);
+
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        name: product.name,
+        sku: product.sku,
+        barcode: product.barcode || "",
+        imageUrl: product.imageUrl || "",
+        categoryId: product.categoryId || "",
+        unit: product.unit || "pcs",
+        productType: product.productType || "RETAIL",
+        isSellable: product.isSellable ?? true,
+        sellingPrice: product.sellingPrice ? product.sellingPrice.toString() : "0",
+        reorderLevel: product.reorderLevel ? product.reorderLevel.toString() : "5",
+        openingStock: "0",
+        openingCost: "0",
+      });
+    } else {
+      setFormData({
+        name: "",
+        sku: "",
+        barcode: "",
+        imageUrl: "",
+        categoryId: "",
+        unit: "pcs",
+        productType: "RETAIL",
+        isSellable: true,
+        sellingPrice: "",
+        reorderLevel: "5",
+        openingStock: "0",
+        openingCost: "0",
+      });
+    }
+    setError(null);
+  }, [product, open]);
 
   const handleQuickCategoryCreate = async () => {
     const name = quickCategoryName.trim();
@@ -76,43 +120,66 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const res = await createProduct({
-        name: formData.name,
-        sku: formData.sku,
-        barcode: formData.barcode || undefined,
-        imageUrl: formData.imageUrl || undefined,
-        categoryId: formData.categoryId || undefined,
-        unit: formData.unit,
-        productType: formData.productType,
-        isSellable: formData.isSellable,
-        sellingPrice: Number(formData.sellingPrice || 0),
-        reorderLevel: Number(formData.reorderLevel),
-        openingStock: Number(formData.openingStock),
-        openingCost: Number(formData.openingCost),
-      });
+      if (product) {
+        const res = await updateProduct(product.id, {
+          name: formData.name,
+          sku: formData.sku,
+          barcode: formData.barcode || undefined,
+          imageUrl: formData.imageUrl || undefined,
+          categoryId: formData.categoryId || undefined,
+          unit: formData.unit,
+          productType: formData.productType,
+          isSellable: formData.isSellable,
+          sellingPrice: Number(formData.sellingPrice || 0),
+          reorderLevel: Number(formData.reorderLevel),
+        });
 
-      if (!res.success) {
-        setError(res.error);
-        return;
+        if (!res.success) {
+          setError(res.error);
+          return;
+        }
+      } else {
+        const res = await createProduct({
+          name: formData.name,
+          sku: formData.sku,
+          barcode: formData.barcode || undefined,
+          imageUrl: formData.imageUrl || undefined,
+          categoryId: formData.categoryId || undefined,
+          unit: formData.unit,
+          productType: formData.productType,
+          isSellable: formData.isSellable,
+          sellingPrice: Number(formData.sellingPrice || 0),
+          reorderLevel: Number(formData.reorderLevel),
+          openingStock: Number(formData.openingStock),
+          openingCost: Number(formData.openingCost),
+        });
+
+        if (!res.success) {
+          setError(res.error);
+          return;
+        }
       }
 
+      onSuccess?.();
       onOpenChange(false);
-      setFormData({
-        name: "",
-        sku: "",
-        barcode: "",
-        imageUrl: "",
-        categoryId: "",
-        unit: "pcs",
-        productType: "RETAIL",
-        isSellable: true,
-        sellingPrice: "",
-        reorderLevel: "5",
-        openingStock: "0",
-        openingCost: "0",
-      });
+      if (!product) {
+        setFormData({
+          name: "",
+          sku: "",
+          barcode: "",
+          imageUrl: "",
+          categoryId: "",
+          unit: "pcs",
+          productType: "RETAIL",
+          isSellable: true,
+          sellingPrice: "",
+          reorderLevel: "5",
+          openingStock: "0",
+          openingCost: "0",
+        });
+      }
     } catch (err: any) {
-      setError(err?.message || "Failed to create product");
+      setError(err?.message || (product ? "Failed to update product" : "Failed to create product"));
     } finally {
       setIsSubmitting(false);
     }
@@ -126,10 +193,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div>
               <Dialog.Title className="text-base font-semibold text-slate-900">
-                Add New Product
+                {product
+                  ? (isBn ? "পণ্য সম্পাদনা" : "Edit Product")
+                  : (isBn ? "নতুন পণ্য যোগ" : "Add New Product")}
               </Dialog.Title>
               <Dialog.Description className="text-xs text-slate-500 mt-0.5">
-                Create a sellable inventory item
+                {product
+                  ? (isBn ? `SKU: ${product.sku} • তথ্য ও মূল্য পরিবর্তন করুন` : `SKU: ${product.sku} • Update details & pricing`)
+                  : (isBn ? "নতুন মিষ্টি বা ইনভেন্টরি আইটেম তৈরি করুন" : "Create a sellable inventory item")}
               </Dialog.Description>
             </div>
             <Dialog.Close asChild>
@@ -155,7 +226,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <input
                   required
                   type="text"
-                  placeholder="e.g. Radhuni Pure Mustard Oil 500ml"
+                  placeholder="e.g. ছানার রসগোল্লা (Chhana Rasgulla 1kg)"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -169,7 +240,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <input
                   required
                   type="text"
-                  placeholder="e.g. OIL-RAD-500"
+                  placeholder="e.g. SWT-RAS-01"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
@@ -208,7 +279,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowQuickCategory(!showQuickCategory)}
-                    className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-0.5"
+                    className="text-xs text-blue-600 hover:text-blue-700 font-semibold inline-flex items-center gap-0.5"
                   >
                     <Plus className="w-3 h-3" />
                     <span>{showQuickCategory ? "Select Existing" : "Add New"}</span>
@@ -338,39 +409,48 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               </div>
             </div>
 
-            {/* Opening Stock Section */}
-            <div className="pt-3 border-t border-slate-100">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-                Opening Stock Balance (Optional)
-              </span>
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">Opening Quantity</label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={formData.openingStock}
-                    onChange={(e) => setFormData({ ...formData, openingStock: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="font-medium text-slate-700 block mb-1">
-                    Cost per Unit (৳)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.openingCost}
-                    onChange={(e) => setFormData({ ...formData, openingCost: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                  />
+            {/* In Edit mode, show current stock info; in Create mode, allow opening stock */}
+            {product ? (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between text-xs">
+                <span className="text-slate-600 font-medium">Current Stock / বর্তমান মজুদ:</span>
+                <span className="font-bold text-slate-900 font-mono">
+                  {product.stockQty} {product.unit} (Avg Cost: ৳{product.avgCost.toFixed(2)})
+                </span>
+              </div>
+            ) : (
+              <div className="pt-3 border-t border-slate-100">
+                <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider block mb-2">
+                  Opening Stock Balance (Optional)
+                </span>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <label className="font-medium text-slate-700 block mb-1">Opening Quantity</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={formData.openingStock}
+                      onChange={(e) => setFormData({ ...formData, openingStock: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-medium text-slate-700 block mb-1">
+                      Cost per Unit (৳)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.openingCost}
+                      onChange={(e) => setFormData({ ...formData, openingCost: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
               <button
@@ -378,14 +458,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 onClick={() => onOpenChange(false)}
                 className="px-4 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
               >
-                Cancel
+                {isBn ? "বাতিল" : "Cancel"}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50"
               >
-                {isSubmitting ? "Saving..." : "Save Product"}
+                {isSubmitting
+                  ? (isBn ? "সংরক্ষণ হচ্ছে..." : "Saving...")
+                  : product
+                  ? (isBn ? "আপডেট করুন" : "Update Product")
+                  : (isBn ? "সংরক্ষণ করুন" : "Save Product")}
               </button>
             </div>
           </form>

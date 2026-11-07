@@ -44,9 +44,9 @@ export async function createUserAction(data: {
       throw new Error("A valid email address is required.");
     }
 
-    const rawPassword = data.password?.trim() || "staff123";
-    if (rawPassword.length < 6) {
-      throw new Error("Password must be at least 6 characters long.");
+    const rawPassword = data.password?.trim() ?? "";
+    if (rawPassword.length < 8) {
+      throw new Error("Password must be at least 8 characters long.");
     }
 
     const existing = await prisma.user.findFirst({

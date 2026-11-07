@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma, D, BusinessError, TX_OPTIONS } from "@/lib/prisma";
 import { applyMovement } from "@/modules/inventory/service";
+import { assertPostingAllowed } from "@/modules/treasury/guard";
 
 export const createSaleSchema = z.object({
   orgId: z.string().uuid(),
@@ -60,6 +61,11 @@ export async function createSale(input: z.input<typeof createSaleSchema>) {
       const paid = rawPaid.gt(total) ? total : rawPaid;
       if (paid.gt(0) && !i.accountId) throw new BusinessError("Select an account for the payment");
 
+      const now = new Date();
+      if (paid.gt(0)) {
+        await assertPostingAllowed(tx, i.orgId, now);
+      }
+
       const sale = await tx.sale.create({
         data: {
           organizationId: i.orgId, invoiceNo: `INV-${String(seq.lastNo).padStart(6, "0")}`,
@@ -72,7 +78,7 @@ export async function createSale(input: z.input<typeof createSaleSchema>) {
       if (paid.gt(0)) {
         await tx.transaction.create({
           data: { organizationId: i.orgId, type: "INCOME", source: "SALE", amount: paid,
-            accountId: i.accountId!, saleId: sale.id, description: sale.invoiceNo, createdById: i.userId },
+            accountId: i.accountId!, saleId: sale.id, description: sale.invoiceNo, occurredAt: now, createdById: i.userId },
         });
       }
       return sale;
@@ -89,6 +95,9 @@ export async function createSale(input: z.input<typeof createSaleSchema>) {
 /** Collect a later payment on a credit sale. */
 export async function recordSalePayment(p: { orgId: string; saleId: string; amount: number; accountId: string; userId?: string }) {
   return prisma.$transaction(async (tx) => {
+    const now = new Date();
+    await assertPostingAllowed(tx, p.orgId, now);
+
     const sale = await tx.sale.findFirst({ where: { id: p.saleId, organizationId: p.orgId, status: "COMPLETED" } });
     if (!sale) throw new BusinessError("Sale not found");
     const amount = D(p.amount);
@@ -96,23 +105,90 @@ export async function recordSalePayment(p: { orgId: string; saleId: string; amou
     await tx.sale.update({ where: { id: sale.id }, data: { paid: sale.paid.plus(amount) } });
     return tx.transaction.create({
       data: { organizationId: p.orgId, type: "INCOME", source: "SALE", amount, accountId: p.accountId,
-        saleId: sale.id, description: `${sale.invoiceNo} payment`, createdById: p.userId },
+        saleId: sale.id, description: `${sale.invoiceNo} payment`, occurredAt: now, createdById: p.userId },
     });
   }, TX_OPTIONS);
 }
 
-/** Void a completed sale: stock returns at the sold cost, linked income is voided. History is kept. */
+/**
+ * Void a completed sale:
+ * - If sale payment is after booksClosedThrough: standard void (sale marked VOID, payments voided, stock restored).
+ * - If sale payment is at or before booksClosedThrough: reversal refund posted dated now (EXPENSE, source = REFUND),
+ *   stock restored dated now, historical sale remains COMPLETED so closed books are not distorted.
+ */
 export async function voidSale(p: { orgId: string; saleId: string; userId?: string }) {
   return prisma.$transaction(async (tx) => {
-    const sale = await tx.sale.findFirst({ where: { id: p.saleId, organizationId: p.orgId }, include: { items: true } });
+    const sale = await tx.sale.findFirst({
+      where: { id: p.saleId, organizationId: p.orgId },
+      include: { items: true, transactions: { where: { voidedAt: null } } },
+    });
     if (!sale) throw new BusinessError("Sale not found");
     if (sale.status === "VOID") throw new BusinessError("Sale already voided");
-    for (const it of [...sale.items].sort((a, b) => a.productId.localeCompare(b.productId))) {
-      await applyMovement(tx, { orgId: p.orgId, productId: it.productId, type: "SALE_VOID", qty: it.quantity,
-        unitCost: it.unitCost, refType: "sale", refId: sale.id, userId: p.userId });
-    }
+
     const now = new Date();
-    await tx.transaction.updateMany({ where: { saleId: sale.id, voidedAt: null }, data: { voidedAt: now } });
-    return tx.sale.update({ where: { id: sale.id }, data: { status: "VOID", voidedAt: now } });
+    const org = await tx.organization.findUnique({
+      where: { id: p.orgId },
+      select: { booksClosedThrough: true },
+    });
+
+    const isClosedPeriod =
+      org?.booksClosedThrough && sale.createdAt <= org.booksClosedThrough;
+
+    if (isClosedPeriod) {
+      // Reversal dated now: Closed day records remain immutable!
+      for (const it of [...sale.items].sort((a, b) => a.productId.localeCompare(b.productId))) {
+        await applyMovement(tx, {
+          orgId: p.orgId, productId: it.productId, type: "SALE_VOID", qty: it.quantity,
+          unitCost: it.unitCost, refType: "sale_refund", refId: sale.id, userId: p.userId,
+        });
+      }
+
+      // Post refund row from the original payment account if paid > 0
+      const activeTx = sale.transactions[0];
+      if (sale.paid.gt(0) && activeTx) {
+        await tx.transaction.create({
+          data: {
+            organizationId: p.orgId,
+            type: "EXPENSE",
+            source: "REFUND",
+            amount: sale.paid,
+            accountId: activeTx.accountId,
+            saleId: sale.id,
+            description: `Refund ${sale.invoiceNo} (voided after close)`,
+            occurredAt: now,
+            createdById: p.userId,
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          organizationId: p.orgId,
+          userId: p.userId ?? "system",
+          action: "REFUND_SALE_AFTER_CLOSE",
+          entity: "Sale",
+          entityId: sale.id,
+          detail: { invoiceNo: sale.invoiceNo, amount: sale.paid },
+        },
+      });
+
+      return sale;
+    } else {
+      // Open period: normal void
+      for (const it of [...sale.items].sort((a, b) => a.productId.localeCompare(b.productId))) {
+        await applyMovement(tx, {
+          orgId: p.orgId, productId: it.productId, type: "SALE_VOID", qty: it.quantity,
+          unitCost: it.unitCost, refType: "sale", refId: sale.id, userId: p.userId,
+        });
+      }
+      await tx.transaction.updateMany({
+        where: { saleId: sale.id, voidedAt: null },
+        data: { voidedAt: now },
+      });
+      return tx.sale.update({
+        where: { id: sale.id },
+        data: { status: "VOID", voidedAt: now },
+      });
+    }
   }, TX_OPTIONS);
 }

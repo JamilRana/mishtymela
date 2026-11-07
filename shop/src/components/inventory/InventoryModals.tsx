@@ -22,7 +22,7 @@ import {
   reportWastageAction,
   recordSweetProductionAction,
 } from "@/actions/inventory";
-import { useLanguageStore } from "@/stores/language";
+import { useHydratedLanguage } from "@/stores/language";
 
 export interface ProductOption {
   id: string;
@@ -55,6 +55,9 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
   onOpenChange,
   preselectedProductId,
 }) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
   const [productId, setProductId] = useState(preselectedProductId || (products[0]?.id ?? ""));
   const [quantity, setQuantity] = useState("");
   const [unitCost, setUnitCost] = useState("");
@@ -106,10 +109,12 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
               </div>
               <div>
                 <Dialog.Title className="text-base font-semibold text-slate-900">
-                  Receive Stock (Stock In)
+                  {isBn ? "মালামাল রিসিভ (Stock In)" : "Receive Stock (Stock In)"}
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-slate-500">
-                  Record supplier purchase and recalculate average cost
+                  {isBn
+                    ? "সাপ্লায়ার থেকে ক্রয়কৃত মালামাল স্টক ইন এবং গড় খরচ হিসাব"
+                    : "Record supplier purchase and recalculate average cost"}
                 </Dialog.Description>
               </div>
             </div>
@@ -190,7 +195,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                   </option>
                 ))}
               </select>
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Selecting an account logs a Purchase transaction directly reducing that account balance.
               </p>
             </div>
@@ -212,14 +217,16 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
                 onClick={() => onOpenChange(false)}
                 className="px-4 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
               >
-                Cancel
+                {isBn ? "বাতিল" : "Cancel"}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50"
               >
-                {isSubmitting ? "Receiving..." : "Confirm Stock In"}
+                {isSubmitting
+                  ? (isBn ? "রিসিভ হচ্ছে..." : "Receiving...")
+                  : (isBn ? "স্টক ইন নিশ্চিত করুন" : "Confirm Stock In")}
               </button>
             </div>
           </form>
@@ -240,6 +247,9 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   open,
   onOpenChange,
 }) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [delta, setDelta] = useState("");
   const [reason, setReason] = useState("");
@@ -286,10 +296,12 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
               </div>
               <div>
                 <Dialog.Title className="text-base font-semibold text-slate-900">
-                  Stock Adjustment
+                  {isBn ? "স্টক সমন্বয় (Stock Adjustment)" : "Stock Adjustment"}
                 </Dialog.Title>
                 <Dialog.Description className="text-xs text-slate-500">
-                  Correct inventory for damage, breakage, loss, or count audit
+                  {isBn
+                    ? "ভাঙচুর, ঘাটতি বা অডিট গণনায় মজুদের হিসাব সংশোধন"
+                    : "Correct inventory for damage, breakage, loss, or count audit"}
                 </Dialog.Description>
               </div>
             </div>
@@ -337,7 +349,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
                 onChange={(e) => setDelta(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums font-semibold"
               />
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Use a negative number to write off damaged items. Use positive for excess stock found.
               </p>
             </div>
@@ -360,14 +372,16 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
                 onClick={() => onOpenChange(false)}
                 className="px-4 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
               >
-                Cancel
+                {isBn ? "বাতিল" : "Cancel"}
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50"
               >
-                {isSubmitting ? "Saving..." : "Save Adjustment"}
+                {isSubmitting
+                  ? (isBn ? "সংরক্ষণ হচ্ছে..." : "Saving...")
+                  : (isBn ? "সমন্বয় সংরক্ষণ করুন" : "Save Adjustment")}
               </button>
             </div>
           </form>
@@ -391,7 +405,7 @@ export const IssueKitchenModal: React.FC<IssueKitchenModalProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { language } = useLanguageStore();
+  const { language } = useHydratedLanguage();
   // Filter raw materials first, or all products
   const rawMaterials = products.filter(
     (p) => p.productType === "RAW_MATERIAL" || p.sku.startsWith("RAW-")
@@ -582,7 +596,7 @@ export const SweetProductionModal: React.FC<SweetProductionModalProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { language } = useLanguageStore();
+  const { language } = useHydratedLanguage();
 
   const retailSweets = products.filter(
     (p) => p.isSellable || p.productType === "RETAIL" || p.sku.startsWith("SWT-") || p.sku.startsWith("DOI-")
@@ -725,7 +739,7 @@ export const SweetProductionModal: React.FC<SweetProductionModalProps> = ({
                       ? "ব্যবহৃত কাঁচামাল (ঐচ্ছিক স্বয়ংক্রিয় হিসাব)"
                       : "Ingredients Consumed (Optional Auto-deduct)"}
                   </span>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-xs text-slate-500">
                     {language === "bn" ? "স্টক থেকে স্বয়ংক্রিয়ভাবে কাটা হবে" : "Deducted from raw stock"}
                   </span>
                 </div>
@@ -734,7 +748,7 @@ export const SweetProductionModal: React.FC<SweetProductionModalProps> = ({
                     <div key={rm.id} className="flex items-center justify-between bg-white p-2 rounded border border-slate-200">
                       <div className="min-w-0 pr-2">
                         <span className="font-medium text-slate-800 block truncate">{rm.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-xs text-slate-500 font-mono">
                           {language === "bn" ? "স্টক: " : "Stock: "}{rm.stockQty} {rm.unit}
                         </span>
                       </div>
@@ -813,7 +827,7 @@ export const ReportWastageModal: React.FC<ReportWastageModalProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { language } = useLanguageStore();
+  const { language } = useHydratedLanguage();
 
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [quantity, setQuantity] = useState("");

@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
   const role = session.role;
 
   // Manager routes
-  const managerAllowedPrefixes = ["/pos", "/products", "/inventory"];
+  const managerAllowedPrefixes = ["/pos", "/products", "/inventory", "/finance"];
   // Cashier routes
   const cashierAllowedPrefixes = ["/pos"];
 

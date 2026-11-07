@@ -13,10 +13,12 @@ export default async function ReportsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
-        title="Sweet Shop Date & Month Reports"
-        description="Daily & monthly profit & loss accounting, sweet item profitability, raw material & box purchases"
+        title="Reports"
+        titleBn="রিপোর্ট"
+        description="Sales, profit and expenses for a day, a month or any date range"
+        descriptionBn="যেকোনো দিন, মাস বা তারিখ রেঞ্জের বিক্রি, লাভ ও খরচ"
       />
       <DateMonthReportsView initialData={initialData} shopProfile={org} />
     </div>

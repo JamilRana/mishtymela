@@ -114,16 +114,20 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 border border-slate-200 rounded-md">
         <div className="flex items-center gap-6">
           <div>
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">Total Inventory Value</span>
+            <span className="text-xs text-slate-500 uppercase font-semibold">
+              {language === "bn" ? "মোট স্টক মূল্য" : "Total Inventory Value"}
+            </span>
             <div className="text-xl font-bold text-slate-900 mt-0.5">
               <MoneyText amount={totalStockValuation} />
             </div>
           </div>
           <div className="h-8 w-px bg-slate-200" />
           <div>
-            <span className="text-[11px] text-slate-400 uppercase font-semibold">Low Stock SKUs</span>
+            <span className="text-xs text-slate-500 uppercase font-semibold">
+              {language === "bn" ? "স্বল্প স্টক আইটেম" : "Low Stock SKUs"}
+            </span>
             <div className="text-xl font-bold text-amber-600 mt-0.5">
-              {lowStockCount} <span className="text-xs font-normal text-slate-500">items need reorder</span>
+              {lowStockCount} <span className="text-xs font-normal text-slate-500">{language === "bn" ? "আইটেমে রি-অর্ডার প্রয়োজন" : "items need reorder"}</span>
             </div>
           </div>
         </div>
@@ -163,7 +167,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
           <button
             onClick={() => setIsReportWastageOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold rounded transition-colors"
-            title="Record damaged or spoiled items"
+            title={language === "bn" ? "নষ্ট বা ক্ষতিগ্রস্থ পণ্যের হিসাব লিখুন" : "Record damaged or spoiled items"}
           >
             <Trash2 className="w-3.5 h-3.5 text-rose-500" />
             <span>{language === "bn" ? "অপচয় / নষ্ট" : "Wastage"}</span>
@@ -193,7 +197,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
             )}
           >
             <Boxes className="w-4 h-4" />
-            Stock Levels & Valuation
+            <span>{language === "bn" ? "স্টক তালিকা ও মূল্য" : "Stock Levels & Valuation"}</span>
           </button>
           <button
             onClick={() => setActiveTab("ledger")}
@@ -205,7 +209,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
             )}
           >
             <History className="w-4 h-4" />
-            Movements Ledger ({movements.length})
+            <span>{language === "bn" ? `মুভমেন্ট খতিয়ান (${movements.length})` : `Movements Ledger (${movements.length})`}</span>
           </button>
         </div>
 
@@ -213,7 +217,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Filter by product or SKU..."
+            placeholder={language === "bn" ? "পণ্য বা SKU দিয়ে খুঁজুন..." : "Filter by product or SKU..."}
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -227,16 +231,16 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
 
       {/* TAB 1: Stock Levels */}
       {activeTab === "levels" && (
-        <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
-          <table className="w-full text-left text-xs">
+        <div className="bg-white border border-slate-200 rounded-md overflow-x-auto shadow-xs">
+          <table className="w-full min-w-[700px] text-left text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
-                <th className="py-3 px-4">Item & SKU</th>
-                <th className="py-3 px-4 text-right">Stock Qty</th>
-                <th className="py-3 px-4 text-right">Avg Unit Cost</th>
-                <th className="py-3 px-4 text-right">Inventory Value</th>
-                <th className="py-3 px-4 text-center">Health</th>
-                <th className="py-3 px-4 text-right">Action</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-xs tracking-wider font-semibold">
+                <th className="py-3 px-4">{language === "bn" ? "পণ্য ও SKU" : "Item & SKU"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "মজুদ পরিমাণ" : "Stock Qty"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "একক গড় খরচ" : "Avg Unit Cost"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "মোট মজুদ মূল্য" : "Inventory Value"}</th>
+                <th className="py-3 px-4 text-center">{language === "bn" ? "অবস্থা" : "Health"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "অ্যাকশন" : "Action"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -251,22 +255,22 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-semibold text-slate-900">{p.name}</span>
                         {p.productType === "RAW_MATERIAL" && (
-                          <span className="bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded text-[10px] font-semibold">
+                          <span className="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-xs font-semibold">
                             {language === "bn" ? "কাঁচামাল" : "Raw Material"}
                           </span>
                         )}
                         {p.productType === "PACKAGING" && (
-                          <span className="bg-purple-50 text-purple-800 border border-purple-200 px-1.5 py-0.2 rounded text-[10px] font-semibold">
+                          <span className="bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 rounded text-xs font-semibold">
                             {language === "bn" ? "প্যাকেজিং" : "Packaging"}
                           </span>
                         )}
                         {p.isSellable && (
-                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded text-[10px] font-semibold">
+                          <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded text-xs font-semibold">
                             POS
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-0.5">{p.sku}</div>
+                      <div className="text-xs text-slate-500 font-mono mt-0.5">{p.sku}</div>
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-slate-900">
                       <QuantityText quantity={p.stockQty} unit={p.unit} />
@@ -331,24 +335,24 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
 
       {/* TAB 2: Movements Ledger */}
       {activeTab === "ledger" && (
-        <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
-          <table className="w-full text-left text-xs">
+        <div className="bg-white border border-slate-200 rounded-md overflow-x-auto shadow-xs">
+          <table className="w-full min-w-[780px] text-left text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-semibold">
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Item & SKU</th>
-                <th className="py-3 px-4">Movement Type</th>
-                <th className="py-3 px-4 text-right">Change</th>
-                <th className="py-3 px-4 text-right">Unit Cost</th>
-                <th className="py-3 px-4 text-right">Balance After</th>
-                <th className="py-3 px-4">Note / Reason</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase text-xs tracking-wider font-semibold">
+                <th className="py-3 px-4">{language === "bn" ? "তারিখ ও সময়" : "Date & Time"}</th>
+                <th className="py-3 px-4">{language === "bn" ? "পণ্য ও SKU" : "Item & SKU"}</th>
+                <th className="py-3 px-4">{language === "bn" ? "মুভমেন্টের ধরন" : "Movement Type"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "পরিবর্তন" : "Change"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "একক খরচ" : "Unit Cost"}</th>
+                <th className="py-3 px-4 text-right">{language === "bn" ? "পরবর্তী ব্যালেন্স" : "Balance After"}</th>
+                <th className="py-3 px-4">{language === "bn" ? "বিবরণ / কারণ" : "Note / Reason"}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {paginatedMovements.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
-                    No stock movements recorded
+                    {language === "bn" ? "কোন স্টক মুভমেন্ট রেকর্ড নেই" : "No stock movements recorded"}
                   </td>
                 </tr>
               ) : (
@@ -361,12 +365,12 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                       </td>
                       <td className="py-3 px-4">
                         <div className="font-semibold text-slate-900">{m.productName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{m.sku}</div>
+                        <div className="text-xs text-slate-500 font-mono mt-0.5">{m.sku}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span
                           className={cn(
-                            "inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold",
+                            "inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold",
                             m.type === "PURCHASE" && "bg-blue-50 text-blue-700 border border-blue-200",
                             m.type === "SALE" && "bg-slate-100 text-slate-700 border border-slate-200",
                             m.type === "SALE_VOID" && "bg-emerald-50 text-emerald-700 border border-emerald-200",

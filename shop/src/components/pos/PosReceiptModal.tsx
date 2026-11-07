@@ -6,7 +6,7 @@ import { Printer, Download, Plus, CheckCircle, X } from "lucide-react";
 import { formatMoney } from "@/components/shared/MoneyText";
 import { formatDhakaDate } from "@/components/shared/DateTimeText";
 import { toBnDigits } from "@/lib/bangla-numbers";
-import { useLanguageStore } from "@/stores/language";
+import { useHydratedLanguage } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
   onNewSale,
   shopProfile,
 }) => {
-  const { language } = useLanguageStore();
+  const { language } = useHydratedLanguage();
   const [receiptLang, setReceiptLang] = useState<"bn" | "en">(language);
   const isBn = receiptLang === "bn";
 
@@ -89,7 +89,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                   type="button"
                   onClick={() => setReceiptLang("bn")}
                   className={cn(
-                    "px-2 py-0.5 rounded text-[11px] font-bold transition-colors",
+                    "px-2.5 py-1 rounded text-xs font-bold transition-colors",
                     isBn ? "bg-rose-600 text-white" : "text-slate-600 hover:text-slate-900"
                   )}
                 >
@@ -99,7 +99,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                   type="button"
                   onClick={() => setReceiptLang("en")}
                   className={cn(
-                    "px-2 py-0.5 rounded text-[11px] font-bold transition-colors",
+                    "px-2.5 py-1 rounded text-xs font-bold transition-colors",
                     !isBn ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
                   )}
                 >
@@ -119,27 +119,27 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           {/* Printable Thermal Receipt Paper Container */}
           <div
             id="thermal-receipt"
-            className="my-3 p-4 bg-white border border-slate-200 rounded text-slate-900 text-xs font-mono select-text"
+            className="my-3 p-4 bg-white border border-slate-200 rounded text-slate-900 text-sm font-mono select-text"
           >
             {/* Store Header */}
             <div className="text-center pb-2 border-b border-dashed border-slate-300">
-              <h2 className="font-bold text-sm text-slate-900 uppercase">
+              <h2 className="font-bold text-base text-slate-900 uppercase">
                 {activeShop.name}
               </h2>
               {activeShop.address && (
-                <p className="text-[10px] text-slate-600 mt-0.5">{activeShop.address}</p>
+                <p className="text-xs text-slate-600 mt-0.5">{activeShop.address}</p>
               )}
               {activeShop.phone && (
-                <p className="text-[10px] text-slate-600 font-mono">
+                <p className="text-xs text-slate-600 font-mono">
                   {isBn ? "মোবাইল: " : "Phone: "}{isBn ? toBnDigits(activeShop.phone) : activeShop.phone}
                 </p>
               )}
               {activeShop.vatNumber && (
-                <p className="text-[9px] text-slate-400 font-mono">
+                <p className="text-xs text-slate-500 font-mono">
                   {isBn ? toBnDigits(activeShop.vatNumber) : activeShop.vatNumber}
                 </p>
               )}
-              <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-[10px] text-slate-600">
+              <div className="mt-1 pt-1 border-t border-dotted border-slate-200 flex justify-between items-center text-xs text-slate-600">
                 <span className="font-semibold font-mono">{isBn ? toBnDigits(receipt.invoiceNo) : receipt.invoiceNo}</span>
                 <span>{formatDhakaDate(receipt.date, true, receiptLang)}</span>
               </div>
@@ -147,25 +147,25 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
 
             {/* Customer Info if applicable */}
             {receipt.customerName && (
-              <div className="py-1 text-[11px] border-b border-dashed border-slate-300 flex justify-between">
+              <div className="py-1.5 text-xs sm:text-sm border-b border-dashed border-slate-300 flex justify-between">
                 <span className="text-slate-500">{isBn ? "ক্রেতার নাম:" : "Customer:"}</span>
                 <span className="font-semibold">{receipt.customerName}</span>
               </div>
             )}
 
             {/* Line Items */}
-            <div className="py-2 border-b border-dashed border-slate-300 space-y-1">
-              <div className="flex justify-between font-bold text-[10px] text-slate-500 uppercase">
+            <div className="py-2 border-b border-dashed border-slate-300 space-y-1.5">
+              <div className="flex justify-between font-bold text-xs text-slate-600 uppercase">
                 <span>{isBn ? "আইটেম" : "Item"}</span>
                 <span>{isBn ? "পরিমাণ x দর" : "Qty x Rate"}</span>
                 <span>{isBn ? "মোট" : "Total"}</span>
               </div>
               {receipt.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-baseline text-[11px]">
+                <div key={idx} className="flex justify-between items-baseline text-xs sm:text-sm">
                   <div className="truncate max-w-[130px] font-sans">
                     {item.name}
                   </div>
-                  <div className="text-[10px] text-slate-600 font-mono">
+                  <div className="text-xs text-slate-600 font-mono">
                     {isBn ? toBnDigits(item.quantity) : item.quantity} x {formatMoney(item.unitPrice, receiptLang)}
                   </div>
                   <div className="font-semibold font-mono">{formatMoney(item.lineTotal, receiptLang)}</div>
@@ -174,7 +174,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             </div>
 
             {/* Calculation Breakdown */}
-            <div className="py-2 border-b border-dashed border-slate-300 space-y-0.5 text-[11px]">
+            <div className="py-2 border-b border-dashed border-slate-300 space-y-1 text-xs sm:text-sm">
               <div className="flex justify-between text-slate-600">
                 <span>{isBn ? "উপমোট (সাবটোটাল):" : "Subtotal:"}</span>
                 <span className="font-mono">{formatMoney(receipt.subtotal, receiptLang)}</span>
@@ -185,7 +185,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                   <span className="font-mono">-{formatMoney(receipt.discount, receiptLang)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-slate-900 text-xs pt-1 border-t border-slate-200">
+              <div className="flex justify-between font-bold text-slate-900 text-sm sm:text-base pt-1 border-t border-slate-200">
                 <span>{isBn ? "সর্বমোট বিল:" : "Total Amount:"}</span>
                 <span className="font-mono font-bold text-slate-900">{formatMoney(receipt.total, receiptLang)}</span>
               </div>
@@ -208,7 +208,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
             </div>
 
             {/* Receipt Footer */}
-            <div className="pt-2 text-center text-[10px] text-slate-500">
+            <div className="pt-2 text-center text-xs text-slate-600">
               <p>{activeShop.receiptFooter || "স্বাদে ও ঐতিহ্যে অনন্য • ধন্যবাদ আবার আসবেন!"}</p>
             </div>
           </div>
@@ -217,14 +217,14 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
           <div className="grid grid-cols-2 gap-2 mt-4 print:hidden">
             <button
               onClick={handlePrint}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs sm:text-sm font-semibold transition-colors"
             >
               <Printer className="w-4 h-4" />
               <span>{isBn ? "রশিদ প্রিন্ট (Thermal)" : "Print Receipt"}</span>
             </button>
             <button
               onClick={onNewSale}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-semibold transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs sm:text-sm font-semibold transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>{isBn ? "পরবর্তী বিক্রয়" : "Next Sale"}</span>

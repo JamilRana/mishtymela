@@ -6,31 +6,49 @@
   --background: #f8fafc;
   --surface: #ffffff;
   --border: #e2e8f0;
-  --input: #e2e8f0;
+  --input: #cbd5e1; /* inputs keep a firmer edge than cards */
   --ring: #2563eb;
-  --foreground: #0f172a;
+  --foreground: #090d16;
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --muted-foreground: #334155;
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
   --primary-foreground: #ffffff;
-  --success: #16a34a;
+  --success: #15803d;
   --success-light: #f0fdf4;
-  --success-foreground: #15803d;
-  --warning: #d97706;
+  --success-foreground: #14532d;
+  --warning: #b45309;
   --warning-light: #fffbeb;
-  --warning-foreground: #b45309;
-  --danger: #dc2626;
+  --warning-foreground: #78350f;
+  --danger: #b91c1c;
   --danger-light: #fef2f2;
-  --danger-foreground: #b91c1c;
+  --danger-foreground: #7f1d1d;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hind Siliguri", "Kalpurush", "SolaimanLipi", "Noto Sans Bengali", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Mobile & Touch Visibility Enhancements */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  button, a, input, select {
+    touch-action: manipulation;
+  }
+}
+
+/* Keep a real text hierarchy: slate-400 on white fails contrast, so lift only that one. */
+.text-slate-400,
+.text-stone-400 {
+  color: #64748b;
 }
 
 /* Tabular numerals by default for monetary & quantitative elements */
@@ -92,8 +110,8 @@ body {
     padding: 2mm 3mm;
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11px;
-    line-height: 1.35;
+    font-size: 13px;
+    line-height: 1.4;
     box-sizing: border-box;
     border: none !important;
     box-shadow: none !important;
@@ -115,3 +133,71 @@ body {
     display: none !important;
   }
 }
+
+/* ---------------------------------------------------- */
+/* Vengeance UI Tokens & Animation Utilities           */
+/* ---------------------------------------------------- */
+:root {
+  --vng-transition-speed: 150ms;
+  --vng-transition-speed-slow: 300ms;
+  --stripe-color: #fff;
+}
+
+@property --glow-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes glow-angle-rotate {
+  to {
+    --glow-angle: 1turn;
+  }
+}
+
+.glow-conic {
+  border-image: conic-gradient(
+      from var(--glow-angle),
+      var(--glow-color-1, #669900),
+      var(--glow-color-2, #99cc33),
+      var(--glow-color-3, #ccee66),
+      var(--glow-color-4, #006699),
+      var(--glow-color-5, #3399cc),
+      var(--glow-color-6, #990066),
+      var(--glow-color-7, #cc3399),
+      var(--glow-color-8, #ff6600),
+      var(--glow-color-9, #ff9900),
+      var(--glow-color-10, #ffcc00),
+      var(--glow-color-1, #669900)
+    )
+    1;
+  animation: glow-angle-rotate var(--glow-animation-duration, 4s) linear infinite;
+}
+
+@keyframes aurora-smooth-bg {
+  from {
+    background-position: 50% 50%, 50% 50%;
+  }
+  to {
+    background-position: 350% 50%, 350% 50%;
+  }
+}
+
+@keyframes aurora-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-aurora-bg {
+  animation: aurora-smooth-bg 60s linear infinite;
+}
+
+.animate-aurora-blink {
+  animation: aurora-blink 2s ease-in-out infinite;
+}
+

@@ -30,6 +30,8 @@ async function main() {
     ["Cash", "CASH"],
     ["bKash", "MOBILE"],
     ["Bank", "BANK"],
+    ["Safe", "SAFE"],
+    ["Owner Capital/Drawings", "OWNER"],
   ] as const) {
     await prisma.account.upsert({
       where: { organizationId_name: { organizationId: org.id, name } },
@@ -45,6 +47,8 @@ async function main() {
     "Transport",
     "Marketing",
     "Repairs",
+    "Payment gateway fees",
+    "Cash difference",
     "Other",
   ]) {
     await prisma.txCategory.upsert({
@@ -57,6 +61,26 @@ async function main() {
       },
       update: {},
       create: { organizationId: org.id, name, type: "EXPENSE" },
+    });
+  }
+
+  for (const name of [
+    "Other Income (অন্যান্য আয়)",
+    "Capital Investment (মূলধন বিনিয়োগ)",
+    "Commission & Rebate (কমিশন ও ছাড়)",
+    "Scrap / Container Sale (খালি টিন ও অবশিষ্ট বিক্রয়)",
+    "Cash difference",
+  ]) {
+    await prisma.txCategory.upsert({
+      where: {
+        organizationId_name_type: {
+          organizationId: org.id,
+          name,
+          type: "INCOME",
+        },
+      },
+      update: {},
+      create: { organizationId: org.id, name, type: "INCOME" },
     });
   }
 

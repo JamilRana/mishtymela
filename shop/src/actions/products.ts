@@ -306,3 +306,50 @@ export async function toggleProductActive(id: string, active: boolean) {
     return { active };
   }, "Failed to update product status.");
 }
+
+export async function deleteProduct(id: string) {
+  return handleAction("deleteProduct", async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    // Check if product exists in this organization
+    const product = await prisma.product.findUnique({
+      where: { id, organizationId: orgId },
+      include: {
+        _count: {
+          select: { saleItems: true },
+        },
+      },
+    });
+
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Protect sales integrity
+    if (product._count.saleItems > 0) {
+      throw new Error(
+        `Cannot delete "${product.name}" because it has recorded sales history (${product._count.saleItems} invoices). Please deactivate it instead to hide it from the POS and public catalog.`
+      );
+    }
+
+    // Delete associated stock movements
+    await prisma.stockMovement.deleteMany({
+      where: { productId: id, organizationId: orgId },
+    });
+
+    // Delete product
+    await prisma.product.delete({
+      where: { id, organizationId: orgId },
+    });
+
+    try {
+      revalidatePath("/");
+      revalidatePath("/products");
+      revalidatePath("/inventory");
+      revalidatePath("/pos");
+    } catch {}
+
+    return { id };
+  }, "Failed to delete product.");
+}

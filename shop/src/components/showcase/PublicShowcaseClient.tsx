@@ -20,6 +20,12 @@ import {
 import { LanguageToggle } from "@/components/shared/LanguageToggle";
 import { useHydratedLanguage } from "@/stores/language";
 import { toBnDigits } from "@/lib/bangla-numbers";
+import {
+  BorderBeam,
+  InteractiveHoverButton,
+  AnimatedTooltip,
+  AnimatedRays,
+} from "@/components/ui";
 
 export interface ShowcaseProduct {
   id: string;
@@ -125,7 +131,7 @@ export function PublicShowcaseClient({
               <span>
                 {isBn ? "লগইন:" : "Staff:"}{" "}
                 <strong className="text-white font-medium">{session.name}</strong>{" "}
-                <span className="text-stone-400 font-mono text-[11px]">({session.role})</span>
+                <span className="text-stone-400 font-mono text-xs">({session.role})</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -247,14 +253,23 @@ export function PublicShowcaseClient({
       </header>
 
       {/* 4. Editorial Hero Section */}
-      <section className="border-b border-stone-200 bg-white">
+      <AnimatedRays className="border-b border-stone-200 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             <div className="lg:col-span-8 space-y-4">
               <div className="inline-flex items-center gap-2 text-xs font-semibold text-stone-500 tracking-wider uppercase">
                 <span>{isBn ? "ত্রিশাল, ময়মনসিংহ" : "Trishal, Mymensingh"}</span>
                 <span>•</span>
-                <span>{isBn ? "খাঁটি মিষ্টি ও দই" : "Artisanal Sweets & Dairy"}</span>
+                <AnimatedTooltip
+                  content={isBn ? "প্রতিদিন ১০০% তাজা ছানা ও গাওয়া ঘিয়ে তৈরি" : "Crafted daily with 100% fresh curd & pure ghee"}
+                  variant="cora"
+                  accentColor="#d97706"
+                  shapeColor="#1c1917"
+                >
+                  <span className="hover:text-amber-700 transition-colors cursor-pointer border-b border-dashed border-stone-400">
+                    {isBn ? "খাঁটি মিষ্টি ও দই ✨" : "Artisanal Sweets & Dairy ✨"}
+                  </span>
+                </AnimatedTooltip>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-stone-900 leading-[1.15]">
@@ -300,20 +315,26 @@ export function PublicShowcaseClient({
                   <span>{isBn ? "হোয়াটসঅ্যাপ" : "WhatsApp"}</span>
                 </a>
 
-                <a
-                  href="#catalog"
-                  className="px-4 py-2.5 text-stone-600 hover:text-stone-900 rounded-md text-xs sm:text-sm font-medium transition-colors"
-                >
-                  {isBn ? "মূল্য তালিকা দেখুন ↓" : "View Price List ↓"}
+                <a href="#catalog" className="inline-block">
+                  <InteractiveHoverButton className="bg-amber-50/60 border-amber-300 hover:border-stone-900 text-stone-900 text-xs sm:text-sm py-2 px-5">
+                    {isBn ? "মূল্য তালিকা দেখুন" : "View Price List"}
+                  </InteractiveHoverButton>
                 </a>
               </div>
             </div>
 
-            {/* Quick Overview Card */}
+            {/* Quick Overview Card with Vengeance UI Border Beam */}
             <div className="lg:col-span-4">
-              <div className="bg-[#f5f5f4] border border-stone-200 rounded-xl p-5 space-y-4">
+              <div className="relative overflow-hidden bg-[#f5f5f4] border border-stone-200 rounded-xl p-5 space-y-4 shadow-xs">
+                <BorderBeam
+                  size={240}
+                  duration={14}
+                  colorFrom="#f59e0b"
+                  colorTo="#b45309"
+                  borderWidth={1.5}
+                />
                 <div>
-                  <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block mb-1">
+                  <span className="text-xs font-bold text-stone-600 uppercase tracking-wider block mb-1">
                     {isBn ? "দোকানের তথ্য" : "Shop Overview"}
                   </span>
                   <h2 className="text-base font-bold text-stone-900">
@@ -340,7 +361,7 @@ export function PublicShowcaseClient({
                   <p className="font-semibold text-stone-800 mb-0.5">
                     {isBn ? "পরবর্তী ধাপ (Next Phase):" : "Next Phase:"}
                   </p>
-                  <p className="text-stone-500 text-[11px] leading-relaxed">
+                  <p className="text-stone-500 text-xs leading-relaxed">
                     {isBn
                       ? "অনলাইন শপিং কার্ট, বিকাশ পেমেন্ট ও হোম ডেলিভারি শীঘ্রই চালু হচ্ছে।"
                       : "Direct online checkout, bKash payment, and delivery launching next."}
@@ -350,7 +371,7 @@ export function PublicShowcaseClient({
             </div>
           </div>
         </div>
-      </section>
+      </AnimatedRays>
 
       {/* 5. Catalog & Price List */}
       <section id="catalog" className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
@@ -507,12 +528,12 @@ export function PublicShowcaseClient({
                     )}
 
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">
+                      <span className="text-xs font-medium text-stone-600 bg-stone-100 px-2 py-0.5 rounded">
                         {p.categoryName}
                       </span>
-                      <span className="text-[11px] text-stone-400 font-mono">
+                      <span className="text-xs text-stone-500 font-mono">
                         {p.inStock ? (
-                          <span className="text-emerald-700 flex items-center gap-1 font-sans">
+                          <span className="text-emerald-700 flex items-center gap-1 font-sans font-medium">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             {isBn ? "স্টকে আছে" : "In Stock"}
                           </span>
@@ -527,23 +548,23 @@ export function PublicShowcaseClient({
                     <div>
                       <h3
                         onClick={() => setActiveModalProduct(p)}
-                        className="text-sm font-bold text-stone-900 hover:underline cursor-pointer leading-snug"
+                        className="text-base sm:text-lg font-bold text-stone-900 hover:underline cursor-pointer leading-snug"
                       >
                         {p.name}
                       </h3>
                     </div>
 
                     {/* Price Block */}
-                    <div className="pt-1 border-t border-stone-100 flex items-baseline justify-between">
-                      <span className="text-xs text-stone-500 font-medium">
+                    <div className="pt-2 border-t border-stone-100 flex items-baseline justify-between">
+                      <span className="text-xs font-bold text-stone-600">
                         {isBn ? "বিক্রয়মূল্য" : "Price"}
                       </span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-xs text-stone-400 font-medium">৳</span>
-                        <span className="text-xl font-bold text-stone-900 tabular-nums">
+                        <span className="text-sm font-bold text-amber-700">৳</span>
+                        <span className="text-2xl font-black text-stone-900 tabular-nums">
                           {isBn ? toBnDigits(p.sellingPrice) : p.sellingPrice}
                         </span>
-                        <span className="text-xs text-stone-500">
+                        <span className="text-xs font-bold text-stone-600">
                           / {unitDisplay}
                         </span>
                       </div>
@@ -551,26 +572,26 @@ export function PublicShowcaseClient({
                   </div>
 
                   {/* Actions */}
-                  <div className="space-y-1.5 pt-4 border-t border-stone-100 mt-4">
+                  <div className="space-y-2 pt-4 border-t border-stone-100 mt-4">
                     {/* Next phase cart preview */}
                     <button
                       type="button"
                       onClick={() => handleCartClick(p.name)}
-                      className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 bg-stone-50 hover:bg-stone-100 text-stone-700 border border-stone-200 rounded text-[11px] font-medium transition-colors"
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 rounded-lg text-xs font-bold transition-colors"
                       title={isBn ? "ই-কমার্স ফিচার পরবর্তী ধাপে আসছে" : "Cart coming in next phase"}
                     >
-                      <ShoppingBag className="w-3 h-3 text-stone-500" />
+                      <ShoppingBag className="w-3.5 h-3.5 text-stone-600" />
                       <span>{isBn ? "অনলাইন কার্ট (Phase 2)" : "Add to Cart (Phase 2)"}</span>
                     </button>
 
                     {/* Call & WhatsApp actions */}
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2">
                       <a
                         href={`tel:${cleanPhone}`}
-                        className="flex items-center justify-center gap-1 py-1.5 px-2 bg-stone-900 hover:bg-stone-800 text-white rounded text-xs font-semibold transition-colors"
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs sm:text-sm font-bold transition-colors shadow-xs"
                         title={isBn ? "ফোনে অর্ডার করুন" : "Call to order"}
                       >
-                        <Phone className="w-3 h-3" />
+                        <Phone className="w-3.5 h-3.5" />
                         <span>{isBn ? "কল করুন" : "Call"}</span>
                       </a>
 
@@ -578,11 +599,10 @@ export function PublicShowcaseClient({
                         href={buildWhatsAppLink(p.name)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-1 py-1.5 px-2 border border-stone-200 hover:border-stone-300 bg-white text-stone-800 rounded text-xs font-medium transition-colors"
-                        title={isBn ? "হোয়াটসঅ্যাপে যোগাযোগ" : "WhatsApp"}
+                        className="flex items-center justify-center gap-1.5 py-2.5 px-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs sm:text-sm font-bold transition-colors shadow-xs"
                       >
-                        <MessageCircle className="w-3 h-3 text-emerald-600" />
-                        <span>WhatsApp</span>
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>{isBn ? "হোয়াটসঅ্যাপ" : "WhatsApp"}</span>
                       </a>
                     </div>
                   </div>
@@ -636,7 +656,7 @@ export function PublicShowcaseClient({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-xs text-stone-600">
             {/* Address */}
             <div className="space-y-2">
-              <span className="font-bold text-stone-900 uppercase tracking-wider block text-[11px]">
+              <span className="font-bold text-stone-900 uppercase tracking-wider block text-xs">
                 {isBn ? "শোরুমের ঠিকানা" : "Showroom Address"}
               </span>
               <p className="text-sm font-semibold text-stone-800">
@@ -647,7 +667,7 @@ export function PublicShowcaseClient({
 
             {/* Hours */}
             <div className="space-y-2">
-              <span className="font-bold text-stone-900 uppercase tracking-wider block text-[11px]">
+              <span className="font-bold text-stone-900 uppercase tracking-wider block text-xs">
                 {isBn ? "সময়সূচি" : "Hours"}
               </span>
               <p className="text-sm font-semibold text-stone-800">
@@ -658,7 +678,7 @@ export function PublicShowcaseClient({
 
             {/* Direct Contact */}
             <div className="space-y-2">
-              <span className="font-bold text-stone-900 uppercase tracking-wider block text-[11px]">
+              <span className="font-bold text-stone-900 uppercase tracking-wider block text-xs">
                 {isBn ? "যোগাযোগ ও স্বত্বাধিকারী" : "Owner & Contact"}
               </span>
               <p className="text-sm font-semibold text-stone-800">
@@ -669,7 +689,7 @@ export function PublicShowcaseClient({
                   {shopInfo.phone}
                 </a>
               </p>
-              <p className="text-stone-400 font-mono text-[11px]">
+              <p className="text-stone-400 font-mono text-xs">
                 {shopInfo.email}
               </p>
             </div>
@@ -718,7 +738,7 @@ export function PublicShowcaseClient({
             )}
             <div className="flex items-start justify-between gap-2">
               <div>
-                <span className="text-[11px] font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded">
+                <span className="text-xs font-medium text-stone-600 bg-stone-100 px-2.5 py-0.5 rounded">
                   {activeModalProduct.categoryName}
                 </span>
                 <h3 className="text-base font-bold text-stone-900 mt-1">
@@ -788,7 +808,7 @@ export function PublicShowcaseClient({
             <p className="font-semibold text-white">
               {isBn ? "অনলাইন কার্ট পরবর্তী ধাপে চালু হবে" : "Cart coming in next phase"}
             </p>
-            <p className="text-stone-400 text-[11px] mt-0.5">
+            <p className="text-stone-400 text-xs mt-0.5">
               {isBn ? (
                 <>
                   "{cartNoticeProduct}" অর্ডার করতে কল করুন{" "}

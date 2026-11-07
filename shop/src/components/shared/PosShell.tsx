@@ -63,13 +63,13 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
           {activeRole !== "CASHIER" && <div className="h-4 w-px bg-slate-700 hidden xs:block" />}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span
-              className="font-bold text-xs sm:text-sm text-white tracking-tight truncate max-w-[140px] sm:max-w-none"
+              className="font-bold text-sm sm:text-base text-white tracking-tight truncate max-w-[150px] sm:max-w-none"
               suppressHydrationWarning
             >
               {shopName || t("shopTitle")}
             </span>
             <span
-              className="text-[10px] bg-rose-600/30 text-rose-300 border border-rose-500/30 px-1.5 py-0.5 rounded font-medium hidden sm:inline"
+              className="text-xs bg-rose-600/40 text-rose-200 border border-rose-500/40 px-2 py-0.5 rounded font-bold hidden sm:inline"
               suppressHydrationWarning
             >
               {t("cashierCounter")}
@@ -77,26 +77,26 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-4 text-xs">
+        <div className="flex items-center gap-2.5 sm:gap-4 text-xs sm:text-sm">
           <LanguageToggle className="bg-slate-800 border-slate-700" />
 
           <div className="hidden sm:flex items-center gap-1.5 text-slate-300">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span className="tabular-nums font-mono text-[11px]" suppressHydrationWarning>
+            <Clock className="w-4 h-4 text-slate-400" />
+            <span className="tabular-nums font-mono text-xs sm:text-sm font-semibold" suppressHydrationWarning>
               {time ? formatDhakaDate(time, true) : "১২:০০:০০ AM"}
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[10px] sm:text-[11px] font-medium" suppressHydrationWarning>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs sm:text-sm font-bold" suppressHydrationWarning>
               {t("online")}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded text-slate-200">
-            <User className="w-3 h-3 text-slate-400" />
-            <span className="font-semibold text-[11px]" suppressHydrationWarning>
+          <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-md text-slate-200">
+            <User className="w-3.5 h-3.5 text-slate-400" />
+            <span className="font-bold text-xs sm:text-sm" suppressHydrationWarning>
               {activeUserName.split(" ")[0]} (
               {activeRole === "ADMIN"
                 ? t("roleAdmin")
@@ -110,11 +110,11 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-1 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded transition-colors"
+            className="flex items-center gap-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-md font-semibold transition-colors"
             title={t("signOut")}
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden md:inline text-[11px] font-medium">{t("signOut")}</span>
+            <LogOut className="w-4 h-4" />
+            <span className="hidden md:inline text-xs sm:text-sm font-bold">{t("signOut")}</span>
           </button>
         </div>
       </header>

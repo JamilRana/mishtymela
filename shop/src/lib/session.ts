@@ -4,8 +4,12 @@ import { Role } from "@prisma/client";
 
 export const SESSION_COOKIE_NAME = "sweet_shop_session";
 
-const secretKey = process.env.AUTH_SECRET || "sweet-shop-default-secure-secret-key-32-chars-min!";
-const JWT_SECRET = new TextEncoder().encode(secretKey);
+const secretKey = process.env.AUTH_SECRET;
+if ((!secretKey || secretKey.length < 32) && process.env.NODE_ENV === "production") {
+  // Fail closed: never sign sessions with a guessable fallback secret.
+  throw new Error("AUTH_SECRET must be set to a random string of 32+ characters.");
+}
+const JWT_SECRET = new TextEncoder().encode(secretKey ?? "dev-only-secret-never-use-in-production-0000");
 
 export interface SessionPayload {
   userId: string;
@@ -22,7 +26,7 @@ export async function signToken(payload: SessionPayload): Promise<string> {
   return await new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime("12h")
     .sign(JWT_SECRET);
 }
 
@@ -90,7 +94,7 @@ export async function setSessionCookie(token: string): Promise<void> {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 12, // 12 hours
     secure: process.env.NODE_ENV === "production",
   });
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Building2, Save, CheckCircle2, AlertCircle, Phone, MapPin, Mail, ReceiptText, ShieldCheck } from "lucide-react";
 import { updateOrganizationAction } from "@/actions/organization";
 import { useOrganizationStore } from "@/stores/organization";
-import { useLanguageStore } from "@/stores/language";
+import { useHydratedLanguage } from "@/stores/language";
 
 interface OrganizationData {
   id: string;
@@ -22,7 +22,7 @@ export const ShopProfileSection: React.FC<{ organization: OrganizationData }> = 
   organization,
 }) => {
   const { setShopInfo } = useOrganizationStore();
-  const { t, language } = useLanguageStore();
+  const { t, language } = useHydratedLanguage();
 
   const [formData, setFormData] = useState({
     name: organization.name || "",
@@ -81,7 +81,7 @@ export const ShopProfileSection: React.FC<{ organization: OrganizationData }> = 
           <Building2 className="w-5 h-5 text-blue-600" />
           <div>
             <h2 className="text-sm font-bold text-slate-900">{t("shopProfileTitle")}</h2>
-            <p className="text-[11px] text-slate-500">{t("shopProfileSubtitle")}</p>
+            <p className="text-xs text-slate-500">{t("shopProfileSubtitle")}</p>
           </div>
         </div>
       </div>
@@ -177,7 +177,7 @@ export const ShopProfileSection: React.FC<{ organization: OrganizationData }> = 
               value={formData.vatNumber}
               onChange={(e) => setFormData({ ...formData, vatNumber: e.target.value })}
               placeholder="e.g. BIN-002938471-0101"
-              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-[11px]"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
             />
           </div>
 

@@ -95,11 +95,11 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-sm font-bold text-slate-800 mb-1.5">
               {t("emailAddress")}
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
@@ -107,17 +107,17 @@ function LoginForm() {
                 placeholder="staff@sweetshop.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                className="w-full pl-10 pr-3.5 py-3 border border-slate-300 rounded-lg text-base text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-medium"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            <label className="block text-sm font-bold text-slate-800 mb-1.5">
               {t("password")}
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 required
@@ -125,7 +125,7 @@ function LoginForm() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3.5 py-2.5 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                className="w-full pl-10 pr-3.5 py-3 border border-slate-300 rounded-lg text-base text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-medium"
               />
             </div>
           </div>
@@ -133,14 +133,14 @@ function LoginForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-bold shadow-md shadow-rose-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-base font-bold shadow-md shadow-rose-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             {isLoading ? (
               <span>{t("signingIn")}</span>
             ) : (
               <>
                 <span>{t("signInBtn")}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>
@@ -148,15 +148,15 @@ function LoginForm() {
 
         {/* Demo Accounts Pill Selector for Quick Testing */}
         <div className="pt-4 border-t border-slate-100">
-          <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-slate-500" />
             {t("demoAccounts")}
           </p>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => handleQuickLogin("owner@example.com", "admin123")}
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-200 rounded-md text-[11px] font-semibold text-slate-700 hover:text-rose-700 transition-all text-center truncate"
+              className="px-2.5 py-2 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-slate-800 hover:text-rose-700 transition-all text-center truncate"
               title="owner@example.com / admin123"
             >
               Admin / Owner
@@ -164,7 +164,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => handleQuickLogin("manager@example.com", "manager123")}
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-200 rounded-md text-[11px] font-semibold text-slate-700 hover:text-rose-700 transition-all text-center truncate"
+              className="px-2.5 py-2 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-slate-800 hover:text-rose-700 transition-all text-center truncate"
               title="manager@example.com / manager123"
             >
               Manager
@@ -172,7 +172,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => handleQuickLogin("cashier@example.com", "cashier123")}
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-200 rounded-md text-[11px] font-semibold text-slate-700 hover:text-rose-700 transition-all text-center truncate"
+              className="px-2.5 py-2 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-slate-800 hover:text-rose-700 transition-all text-center truncate"
               title="cashier@example.com / cashier123"
             >
               Cashier

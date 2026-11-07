@@ -45,47 +45,67 @@ enum TxSource {
   SALE
   PURCHASE
   MANUAL
+  TRANSFER
+  CLOSING_ADJUSTMENT
+  REFUND
 }
 
 enum AccountType {
   CASH
   MOBILE
   BANK
+  SAFE
+  OWNER
+}
+
+enum SessionStatus {
+  OPEN
+  CLOSED
 }
 
 model Organization {
-  id             String          @id @default(uuid())
-  name           String
-  currency       String          @default("BDT")
-  timezone       String          @default("Asia/Dhaka")
-  address        String?
-  phone          String?
-  email          String?
-  vatNumber      String?
-  receiptFooter  String?
-  createdAt      DateTime        @default(now())
-  users          User[]
-  categories     Category[]
-  products       Product[]
-  sales          Sale[]
-  accounts       Account[]
-  txCategories   TxCategory[]
-  transactions   Transaction[]
-  stockMovements StockMovement[]
-  invoiceSeq     InvoiceSequence?
+  id                 String          @id @default(uuid())
+  name               String
+  currency           String          @default("BDT")
+  timezone           String          @default("Asia/Dhaka")
+  address            String?
+  phone              String?
+  email              String?
+  vatNumber          String?
+  receiptFooter      String?
+  booksClosedThrough DateTime?
+  createdAt          DateTime        @default(now())
+  users              User[]
+  categories         Category[]
+  products           Product[]
+  sales              Sale[]
+  accounts           Account[]
+  txCategories       TxCategory[]
+  transactions       Transaction[]
+  stockMovements     StockMovement[]
+  invoiceSeq         InvoiceSequence?
+  daySessions        DaySession[]
+  auditLogs          AuditLog[]
 }
 
 model User {
-  id             String       @id @default(uuid())
-  organizationId String
-  name           String
-  email          String       @unique
-  phone          String?
-  passwordHash   String?
-  role           Role         @default(CASHIER)
-  active         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  id               String        @id @default(uuid())
+  organizationId   String
+  name             String
+  email            String        @unique
+  phone            String?
+  passwordHash     String?
+  failedLogins     Int           @default(0)
+  lockedUntil      DateTime?
+  role             Role          @default(CASHIER)
+  active           Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  organization     Organization  @relation(fields: [organizationId], references: [id])
+  transactions     Transaction[]
+  sessionsOpened   DaySession[]  @relation("SessionOpenedBy")
+  sessionsClosed   DaySession[]  @relation("SessionClosedBy")
+  sessionsApproved DaySession[]  @relation("SessionApprovedBy")
+  auditLogs        AuditLog[]
 }
 
 model Category {
@@ -191,13 +211,14 @@ model SaleItem {
 }
 
 model Account {
-  id             String        @id @default(uuid())
+  id             String              @id @default(uuid())
   organizationId String
   name           String
   type           AccountType
-  active         Boolean       @default(true)
-  organization   Organization  @relation(fields: [organizationId], references: [id])
+  active         Boolean             @default(true)
+  organization   Organization        @relation(fields: [organizationId], references: [id])
   transactions   Transaction[]
+  closings       DayAccountClosing[]
 
   @@unique([organizationId, name])
 }
@@ -223,6 +244,7 @@ model Transaction {
   accountId      String
   categoryId     String?
   saleId         String?
+  transferId     String?
   description    String?
   occurredAt     DateTime      @default(now())
   createdById    String?
@@ -232,7 +254,69 @@ model Transaction {
   account        Account       @relation(fields: [accountId], references: [id])
   category       TxCategory?   @relation(fields: [categoryId], references: [id])
   sale           Sale?         @relation(fields: [saleId], references: [id])
+  createdBy      User?         @relation(fields: [createdById], references: [id])
 
   @@index([organizationId, occurredAt])
   @@index([organizationId, type, source])
+  @@index([organizationId, transferId])
+  @@index([organizationId, accountId, occurredAt, id])
+  @@index([organizationId, createdById])
+}
+
+model DaySession {
+  id             String              @id @default(uuid())
+  organizationId String
+  businessDate   DateTime            @db.Date
+  status         SessionStatus       @default(OPEN)
+  openedAt       DateTime            @default(now())
+  openedById     String
+  openedBy       User                @relation("SessionOpenedBy", fields: [openedById], references: [id])
+  closedAt       DateTime?
+  closedById     String?
+  closedBy       User?               @relation("SessionClosedBy", fields: [closedById], references: [id])
+  approvedById   String?
+  approvedBy     User?               @relation("SessionApprovedBy", fields: [approvedById], references: [id])
+  note           String?
+  closings       DayAccountClosing[]
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, openedAt])
+  @@index([organizationId, status])
+}
+
+model DayAccountClosing {
+  id              String      @id @default(uuid())
+  sessionId       String
+  accountId       String
+  openingBalance  Decimal     @db.Decimal(14, 2)
+  salesIn         Decimal     @db.Decimal(14, 2)
+  otherIn         Decimal     @db.Decimal(14, 2)
+  expensesOut     Decimal     @db.Decimal(14, 2)
+  purchasesOut    Decimal     @db.Decimal(14, 2)
+  transfersNet    Decimal     @db.Decimal(14, 2)
+  expectedBalance Decimal     @db.Decimal(14, 2)
+  countedBalance  Decimal     @db.Decimal(14, 2)
+  variance        Decimal     @db.Decimal(14, 2) // counted - expected
+  varianceReason  String?
+  adjustmentTxId  String?
+  session         DaySession  @relation(fields: [sessionId], references: [id])
+  account         Account     @relation(fields: [accountId], references: [id])
+
+  @@unique([sessionId, accountId])
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  organizationId String
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  action         String        // OPEN_DAY, CLOSE_DAY, REOPEN_DAY, TRANSFER, VOID_SALE, REFUND, ...
+  entity         String
+  entityId       String?
+  detail         Json?
+  createdAt      DateTime      @default(now())
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, userId])
 }

@@ -1,6 +1,7 @@
 import { MovementType, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma, D, BusinessError, TX_OPTIONS, type Tx } from "@/lib/prisma";
+import { assertPostingAllowed } from "@/modules/treasury/guard";
 
 interface MoveInput {
   orgId: string; productId: string; type: MovementType;
@@ -55,6 +56,9 @@ export const receiveStockSchema = z.object({
 export async function receiveStock(input: z.input<typeof receiveStockSchema>) {
   const i = receiveStockSchema.parse(input);
   return prisma.$transaction(async (tx) => {
+    if (i.accountId) {
+      await assertPostingAllowed(tx, i.orgId, new Date());
+    }
     const r = await applyMovement(tx, {
       orgId: i.orgId, productId: i.productId, type: "PURCHASE", qty: i.quantity,
       unitCost: i.unitCost, note: i.note, userId: i.userId, refType: "purchase",

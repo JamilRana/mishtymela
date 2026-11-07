@@ -1,25 +1,26 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   Search,
-  Barcode,
-  Trash2,
+  X,
   Plus,
   Minus,
-  Check,
+  Loader2,
+  AlertCircle,
+  AlertTriangle,
+  Receipt,
   CreditCard,
   Banknote,
   Smartphone,
-  AlertCircle,
-  ShoppingBag,
-  ArrowLeft,
-  ChevronRight,
-  Package,
-  Loader2,
+  ChevronDown,
+  Trash2,
+  Box,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart";
-import { useLanguageStore } from "@/stores/language";
+import { useHydratedLanguage } from "@/stores/language";
 import { formatMoney } from "@/components/shared/MoneyText";
 import { toBnDigits } from "@/lib/bangla-numbers";
 import { PosReceiptModal, type ReceiptData } from "./PosReceiptModal";
@@ -70,7 +71,174 @@ interface PosTerminalProps {
     vatNumber?: string | null;
     receiptFooter?: string | null;
   };
+  sessionStatus?: {
+    isOpen: boolean;
+    id?: string;
+    openedAt?: string;
+    businessDate?: string;
+    openedByName?: string;
+  };
 }
+
+const btn =
+  "w-10 h-10 grid place-items-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 disabled:opacity-40 transition-colors shadow-2xs";
+
+function Stepper({
+  shown,
+  qty,
+  max,
+  label,
+  onChange,
+}: {
+  shown: string;
+  qty: number;
+  max: number;
+  label: string;
+  onChange: (q: number) => void;
+}) {
+  return (
+    <div className="flex items-center shrink-0 gap-1">
+      <button
+        type="button"
+        aria-label={`Decrease ${label}`}
+        className={btn}
+        onClick={() => onChange(qty - 1)}
+      >
+        <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+      </button>
+      <span className="w-8 text-center tabular-nums font-bold text-xs text-slate-800">
+        {shown}
+      </span>
+      <button
+        type="button"
+        aria-label={`Increase ${label}`}
+        className={btn}
+        disabled={qty >= max}
+        onClick={() => onChange(qty + 1)}
+      >
+        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+      </button>
+    </div>
+  );
+}
+
+function QuantityControl({
+  qty,
+  max,
+  unit,
+  label,
+  onChange,
+  bn,
+}: {
+  qty: number;
+  max: number;
+  unit?: string;
+  label: string;
+  onChange: (q: number) => void;
+  bn: boolean;
+}) {
+  const isKg = unit === "kg";
+
+  const handleDec = () => {
+    if (isKg) {
+      if (qty <= 0.25) {
+        onChange(0);
+      } else {
+        const next = Math.round((qty - 0.25) * 1000) / 1000;
+        onChange(next);
+      }
+    } else {
+      onChange(qty - 1);
+    }
+  };
+
+  const handleInc = () => {
+    if (isKg) {
+      const next = Math.min(max, Math.round((qty + 0.25) * 1000) / 1000);
+      onChange(next);
+    } else {
+      onChange(Math.min(max, qty + 1));
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    if (text === "") {
+      onChange(0);
+      return;
+    }
+    const val = parseFloat(text);
+    if (!isNaN(val) && val >= 0) {
+      onChange(Math.min(max, Math.round(val * 1000) / 1000));
+    }
+  };
+
+  return (
+    <div className="flex items-center shrink-0 gap-1">
+      <button
+        type="button"
+        aria-label={`Decrease ${label}`}
+        className={btn}
+        onClick={handleDec}
+        title={
+          isKg
+            ? bn
+              ? "০.২৫ কেজি কমান"
+              : "Decrease 0.25 kg"
+            : bn
+            ? "১ পিস কমান"
+            : "Decrease 1"
+        }
+      >
+        <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+      </button>
+
+      <div className="relative">
+        <input
+          type="number"
+          step={isKg ? "0.01" : "1"}
+          min="0"
+          max={max}
+          value={qty === 0 ? "" : qty}
+          onChange={handleInputChange}
+          placeholder="0"
+          className="w-14 h-10 text-center font-black text-slate-900 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 tabular-nums text-xs transition-all"
+          title={
+            isKg
+              ? bn
+                ? "ওজন লিখুন (যেমন: 0.5)"
+                : "Enter weight in kg"
+              : bn
+              ? "সংখ্যা লিখুন"
+              : "Enter quantity"
+          }
+        />
+      </div>
+
+      <button
+        type="button"
+        aria-label={`Increase ${label}`}
+        className={btn}
+        disabled={qty >= max}
+        onClick={handleInc}
+        title={
+          isKg
+            ? bn
+              ? "০.২৫ কেজি বাড়ান"
+              : "Increase 0.25 kg"
+            : bn
+            ? "১ পিস বাড়ান"
+            : "Increase 1"
+        }
+      >
+        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+      </button>
+    </div>
+  );
+}
+
+const inputClass =
+  "w-full h-10 px-3 text-xs bg-slate-50/80 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 tabular-nums transition-all";
 
 export const PosTerminal: React.FC<PosTerminalProps> = ({
   products,
@@ -78,22 +246,28 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   categories,
   packagingBoxes = [],
   shopProfile,
+  sessionStatus,
 }) => {
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [category, setCategory] = useState("all");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [completedReceipt, setCompletedReceipt] = useState<ReceiptData | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [boxes, setBoxes] = useState<Record<string, number>>({});
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const { t, language } = useHydratedLanguage();
+  const bn = language === "bn";
+  const searchRef = useRef<HTMLInputElement>(null);
+  const keyRef = useRef<string | null>(null);
 
-  // Sweet packaging boxes given with sale (boxId -> quantity)
-  const [selectedBoxes, setSelectedBoxes] = useState<Record<string, number>>({});
-
-  const { t, language } = useLanguageStore();
-
-  // Mobile navigation state: "products" or "cart"
-  const [mobileTab, setMobileTab] = useState<"products" | "cart">("products");
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const paymentAccounts = useMemo(
+    () => accounts.filter((a) => a.type === "CASH" || a.type === "BANK" || a.type === "MOBILE"),
+    [accounts]
+  );
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(() => {
+    const defaultAcc = paymentAccounts.find((a) => a.type === "CASH") ?? paymentAccounts[0] ?? accounts[0];
+    return defaultAcc?.id ?? "";
+  });
 
   const {
     items,
@@ -115,339 +289,689 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
     change,
   } = useCartStore();
 
-  const totalBoxCount = Object.values(selectedBoxes).reduce((sum, q) => sum + q, 0);
-  const totalItemCount = items.reduce((s, i) => s + i.quantity, 0) + totalBoxCount;
+  const num = (v: number) => (bn ? toBnDigits(v) : String(v));
+  const money = (v: number) => formatMoney(v, language);
 
-  // Auto-suggest packaging boxes based on sweet weight in cart (items measured in kg or pieces)
+  const formatQtyWithUnit = (quantity: number, unit: string) => {
+    if (unit === "kg") {
+      if (quantity === 0.25) return bn ? "২৫০ গ্রাম (১ পোয়া)" : "250g (0.25kg)";
+      if (quantity === 0.5) return bn ? "৫০০ গ্রাম (আধা কেজি)" : "500g (0.5kg)";
+      if (quantity === 0.75) return bn ? "৭৫০ গ্রাম" : "750g (0.75kg)";
+      return bn ? `${toBnDigits(quantity)} কেজি` : `${quantity} kg`;
+    }
+    if (unit === "pot") {
+      return bn ? `${toBnDigits(quantity)} হাঁড়ি` : `${quantity} pot`;
+    }
+    return bn ? `${toBnDigits(quantity)} পিস` : `${quantity} pcs`;
+  };
+
+  const boxCount = Object.values(boxes).reduce((s, q) => s + q, 0);
+  const itemCount = items.reduce((s, i) => s + i.quantity, 0) + boxCount;
+  const qtyOf = (id: string) => items.find((i) => i.productId === id)?.quantity ?? 0;
+
+  const signature = JSON.stringify([
+    items.map((i) => [i.productId, i.quantity, i.unitPrice]),
+    discount,
+    paid,
+    paymentMethod,
+    boxes,
+  ]);
+  useEffect(() => {
+    keyRef.current = null;
+    setError(null);
+  }, [signature]);
+
   const autoAssignBoxes = useCallback(() => {
-    if (!packagingBoxes || packagingBoxes.length === 0) return;
+    if (packagingBoxes.length === 0) return;
     const box1kg = packagingBoxes.find(
       (b) => b.sku.includes("1KG") || b.name.includes("1kg") || b.name.includes("১ কেজি")
     );
     const box500g = packagingBoxes.find(
       (b) => b.sku.includes("500G") || b.name.includes("0.5kg") || b.name.includes("আধা কেজি")
     );
-
-    // Sum weight of sweet items in cart
-    const sweetKg = items.reduce((sum, it) => (it.unit === "kg" ? sum + it.quantity : sum), 0);
-    const newBoxes: Record<string, number> = {};
-
-    if (sweetKg > 0) {
-      const wholeKg = Math.floor(sweetKg);
-      const remainder = sweetKg - wholeKg;
-
-      if (box1kg && wholeKg > 0) {
-        newBoxes[box1kg.id] = wholeKg;
-      }
-      if (remainder > 0) {
-        if (box500g) {
-          newBoxes[box500g.id] = (newBoxes[box500g.id] || 0) + (remainder <= 0.5 ? 1 : 2);
-        } else if (box1kg) {
-          newBoxes[box1kg.id] = (newBoxes[box1kg.id] || 0) + 1;
-        }
+    const kg = items.reduce((s, it) => (it.unit === "kg" ? s + it.quantity : s), 0);
+    const next: Record<string, number> = {};
+    if (kg > 0) {
+      const whole = Math.floor(kg),
+        rest = kg - whole;
+      if (box1kg && whole > 0) next[box1kg.id] = whole;
+      if (rest > 0) {
+        if (box500g) next[box500g.id] = (next[box500g.id] || 0) + (rest <= 0.5 ? 1 : 2);
+        else if (box1kg) next[box1kg.id] = (next[box1kg.id] || 0) + 1;
       }
     }
-    setSelectedBoxes(newBoxes);
+    setBoxes(next);
   }, [items, packagingBoxes]);
 
-  // When cart transitions from empty to having items, auto-assign boxes
-  const prevItemsCountRef = useRef(items.length);
+  const prevCount = useRef(items.length);
   useEffect(() => {
-    if (items.length > 0 && prevItemsCountRef.current === 0) {
-      autoAssignBoxes();
-    } else if (items.length === 0) {
-      setSelectedBoxes({});
-    }
-    prevItemsCountRef.current = items.length;
+    if (items.length > 0 && prevCount.current === 0) autoAssignBoxes();
+    else if (items.length === 0) setBoxes({});
+    prevCount.current = items.length;
   }, [items.length, autoAssignBoxes]);
 
-  const handleUpdateBoxQty = (boxId: string, qty: number) => {
-    setSelectedBoxes((prev) => {
+  const setBoxQty = (id: string, qty: number) =>
+    setBoxes((prev) => {
       const next = { ...prev };
-      if (qty <= 0) {
-        delete next[boxId];
-      } else {
-        next[boxId] = qty;
-      }
+      if (qty <= 0) delete next[id];
+      else next[id] = qty;
       return next;
     });
-  };
 
-  // Helper to find account by chosen payment method
-  const getSelectedAccountId = useCallback((): string | undefined => {
-    const acc = accounts.find((a) => {
-      if (paymentMethod === "Cash") return a.type === "CASH" || a.name.toLowerCase().includes("cash");
-      if (paymentMethod === "bKash") return a.type === "MOBILE" || a.name.toLowerCase().includes("bkash");
-      if (paymentMethod === "Bank") return a.type === "BANK" || a.name.toLowerCase().includes("bank");
-      return false;
-    });
-    return acc ? acc.id : accounts[0]?.id;
-  }, [accounts, paymentMethod]);
+  const accountId = useCallback((): string | undefined => {
+    return selectedAccountId || paymentAccounts[0]?.id || accounts[0]?.id;
+  }, [selectedAccountId, paymentAccounts, accounts]);
 
-  const handleCheckout = useCallback(async () => {
-    if (items.length === 0 || isSubmitting) return;
+  const checkout = useCallback(async () => {
+    if (items.length === 0 || submitting) return;
     setError(null);
-
-    const netTotal = total();
-    // Cash received by cashier (could be e.g. 500 on a 120 bill)
-    const tendered = paid !== null ? paid : netTotal;
-    // Amount paid toward invoice (cannot exceed bill total)
-    const billPaid = Math.max(0, Math.min(tendered, netTotal));
-    const selectedAccountId = getSelectedAccountId();
-
-    if (billPaid > 0 && !selectedAccountId) {
-      setError("Please select a valid payment account.");
+    const net = total();
+    const tendered = paid !== null ? paid : net;
+    const billPaid = Math.max(0, Math.min(tendered, net));
+    const accId = accountId();
+    if (billPaid > 0 && !accId) {
+      setError("No payment account is set up for this method.");
       return;
     }
 
-    setIsSubmitting(true);
-    const idempotencyKey = `pos-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
+    setSubmitting(true);
+    if (!keyRef.current)
+      keyRef.current = `pos-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`}`;
     try {
-      // Include any sweet boxes given with the sale at unit price 0 (free packaging)
-      const boxSaleItems = Object.entries(selectedBoxes)
-        .filter(([_, qty]) => qty > 0)
-        .map(([boxId, qty]) => ({
-          productId: boxId,
-          quantity: qty,
-          unitPrice: 0,
-        }));
-
-      const allSaleItems = [
-        ...items.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-        })),
-        ...boxSaleItems,
-      ];
-
+      const boxLines = Object.entries(boxes).filter(([, q]) => q > 0);
       const res = await createSaleAction({
-        idempotencyKey,
-        items: allSaleItems,
+        idempotencyKey: keyRef.current,
+        items: [
+          ...items.map((i) => ({ productId: i.productId, quantity: i.quantity, unitPrice: i.unitPrice })),
+          ...boxLines.map(([productId, quantity]) => ({ productId, quantity, unitPrice: 0 })),
+        ],
         discount,
         paid: billPaid,
-        accountId: selectedAccountId,
+        accountId: accId,
         customerName: customerName.trim() || undefined,
       });
-
       if (!res.success) {
         setError(res.error);
         return;
       }
 
-      const activeAccount = accounts.find((a) => a.id === selectedAccountId);
-
-      const receiptItems = [
-        ...items.map((i) => ({
-          name: i.name,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          lineTotal: i.quantity * i.unitPrice,
-        })),
-        ...Object.entries(selectedBoxes)
-          .filter(([_, qty]) => qty > 0)
-          .map(([boxId, qty]) => {
-            const box = packagingBoxes.find((b) => b.id === boxId);
-            return {
-              name: `${box?.name ?? "Sweet Box"} (${language === "bn" ? "প্যাকেজিং বক্স • ফ্রি" : "Packaging Box • Free"})`,
-              quantity: qty,
-              unitPrice: 0,
-              lineTotal: 0,
-            };
-          }),
-      ];
-
-      setCompletedReceipt({
+      setReceipt({
         invoiceNo: res.sale.invoiceNo,
         customerName: customerName.trim() || undefined,
-        items: receiptItems,
+        items: [
+          ...items.map((i) => ({
+            name: i.name,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            lineTotal: i.quantity * i.unitPrice,
+          })),
+          ...boxLines.map(([id, quantity]) => ({
+            name: `${packagingBoxes.find((b) => b.id === id)?.name ?? "Box"} (${bn ? "প্যাকেজিং বক্স • ফ্রি" : "Packaging box • free"})`,
+            quantity,
+            unitPrice: 0,
+            lineTotal: 0,
+          })),
+        ],
         subtotal: subtotal(),
         discount,
-        total: netTotal,
+        total: net,
         paid: tendered,
         due: due(),
         change: change(),
-        accountName: activeAccount?.name ?? paymentMethod,
+        accountName: accounts.find((a) => a.id === accId)?.name ?? paymentMethod,
         date: new Date(),
       });
-
+      keyRef.current = null;
       clearCart();
-      setSelectedBoxes({});
-      setMobileTab("products");
-    } catch (err: any) {
-      console.error("handleCheckout error:", err);
-      setError(err?.message || "Checkout failed. Please check stock levels.");
+      setBoxes({});
+      setSheetOpen(false);
+    } catch (e: any) {
+      setError(e?.message || "Could not complete the sale. Check your connection and try again.");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
-  }, [items, selectedBoxes, packagingBoxes, isSubmitting, total, paid, getSelectedAccountId, discount, customerName, accounts, subtotal, due, change, clearCart, paymentMethod, language]);
+  }, [
+    items,
+    boxes,
+    packagingBoxes,
+    submitting,
+    total,
+    paid,
+    accountId,
+    discount,
+    customerName,
+    accounts,
+    subtotal,
+    due,
+    change,
+    clearCart,
+    paymentMethod,
+    bn,
+  ]);
 
-  // Keep a ref to handleCheckout so keydown listener does not need to rebind on every state change
-  const handleCheckoutRef = useRef(handleCheckout);
+  const checkoutRef = useRef(checkout);
   useEffect(() => {
-    handleCheckoutRef.current = handleCheckout;
-  }, [handleCheckout]);
+    checkoutRef.current = checkout;
+  }, [checkout]);
 
-  // Focus search input ONCE on initial mount only
   useEffect(() => {
-    // Only focus if we're on a non-touch / desktop device to avoid popping up mobile keyboard automatically
-    if (window.innerWidth >= 1024) {
-      searchInputRef.current?.focus();
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Do not hijack standard keys when typing in other inputs
-      const target = e.target as HTMLElement;
-      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT";
-
+    if (window.innerWidth >= 1024) searchRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "F2") {
         e.preventDefault();
-        searchInputRef.current?.focus();
+        searchRef.current?.focus();
       } else if (e.key === "F9") {
         e.preventDefault();
-        handleCheckoutRef.current();
-      } else if (e.key === "Escape" && isInput) {
-        if (target === searchInputRef.current) {
-          setSearch("");
-        }
+        checkoutRef.current();
       }
     };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Filter products by category and search
-  const filteredProducts = products.filter((p) => {
-    const matchesCategory =
-      selectedCategory === "all" || p.categoryId === selectedCategory;
-    const query = search.trim().toLowerCase();
-    const matchesSearch =
-      query === "" ||
-      p.name.toLowerCase().includes(query) ||
-      p.sku.toLowerCase().includes(query) ||
-      (p.barcode && p.barcode.toLowerCase().includes(query));
+  const q = search.trim().toLowerCase();
+  const visible = products.filter(
+    (p) =>
+      (category === "all" || p.categoryId === category) &&
+      (!q ||
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.barcode?.toLowerCase().includes(q))
+  );
 
-    return matchesCategory && matchesSearch;
-  });
-
-  // Barcode enter handler (instant add on exact match)
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const code = search.trim();
-      if (!code) return;
-
-      const exactMatch = products.find(
-        (p) =>
-          (p.barcode && p.barcode.toLowerCase() === code.toLowerCase()) ||
-          p.sku.toLowerCase() === code.toLowerCase()
-      );
-
-      if (exactMatch) {
-        if (exactMatch.stockQty > 0) {
-          addItem(exactMatch);
-          setSearch("");
-        } else {
-          setError(`Product "${exactMatch.name}" is out of stock.`);
-        }
-      } else if (filteredProducts.length === 1) {
-        if (filteredProducts[0].stockQty > 0) {
-          addItem(filteredProducts[0]);
-          setSearch("");
-        }
-      }
+  const onSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setSearch("");
+      return;
     }
+    if (e.key !== "Enter" || !q) return;
+    e.preventDefault();
+    const hit =
+      products.find((p) => p.barcode?.toLowerCase() === q || p.sku.toLowerCase() === q) ??
+      (visible.length === 1 ? visible[0] : undefined);
+    if (!hit) return;
+    if (hit.stockQty <= 0) {
+      setError(`${hit.name} is out of stock.`);
+      return;
+    }
+    addItem(hit);
+    setSearch("");
   };
 
-  return (
-    <div className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-slate-100 relative">
-      {/* MOBILE SEGMENTED BAR: Switch between Products and Cart on small screens */}
-      <div className="lg:hidden flex items-center bg-white border-b border-slate-200 px-3 py-2 shrink-0 z-20">
-        <div className="flex-1 grid grid-cols-2 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+  const stockBadge = (p: PosProduct) => {
+    if (p.stockQty <= 0) {
+      return (
+        <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+          {bn ? "স্টক শেষ" : "Out of stock"}
+        </span>
+      );
+    }
+    if (p.stockQty <= 5) {
+      return (
+        <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded tabular-nums">
+          {bn ? `${toBnDigits(p.stockQty)} বাকি` : `${p.stockQty} left`}
+        </span>
+      );
+    }
+    return (
+      <span className="text-[11px] font-semibold text-slate-500 tabular-nums">
+        {bn ? `${toBnDigits(p.stockQty)} স্টকে` : `${p.stockQty} in stock`}
+      </span>
+    );
+  };
+
+  const tot = total();
+  const quickCash = Array.from(new Set([50, 100, 500, 1000].map((s) => Math.ceil(tot / s) * s)))
+    .filter((v) => v > tot)
+    .slice(0, 3);
+
+  const header = (inSheet: boolean) => (
+    <div className="h-14 px-4 flex items-center justify-between border-b border-slate-200 bg-white shrink-0">
+      <div className="flex items-center gap-2">
+        <Receipt className="w-4 h-4 text-blue-600" />
+        {inSheet ? (
+          <Dialog.Title className="text-sm font-bold text-slate-900">{t("currentOrder")}</Dialog.Title>
+        ) : (
+          <h2 className="text-sm font-bold text-slate-900">{t("currentOrder")}</h2>
+        )}
+        <span className="text-xs font-bold px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full tabular-nums">
+          {num(itemCount)}
+        </span>
+      </div>
+      <div className="flex items-center gap-1">
+        {items.length > 0 && (
           <button
             type="button"
-            onClick={() => setMobileTab("products")}
-            className={cn(
-              "py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all",
-              mobileTab === "products"
-                ? "bg-white text-slate-900 shadow-xs"
-                : "text-slate-500 hover:text-slate-900"
-            )}
+            onClick={() => {
+              clearCart();
+              setBoxes({});
+            }}
+            className="inline-flex items-center gap-1 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors"
           >
-            <Package className="w-3.5 h-3.5" />
-            <span>{t("catalogTab")}</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{t("clearCart")}</span>
           </button>
+        )}
+        {inSheet && (
+          <Dialog.Close aria-label="Close" className="w-9 h-9 grid place-items-center text-slate-400 hover:text-slate-600 rounded-md">
+            <X className="w-5 h-5" />
+          </Dialog.Close>
+        )}
+      </div>
+    </div>
+  );
+
+  const cartBody = (
+    <div className="flex-1 min-h-0 flex flex-col bg-slate-50/50">
+      {error && (
+        <div role="alert" className="mx-4 mt-3 p-3 flex gap-2 text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded-lg">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-600" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Cart Items List */}
+      <ul className="flex-1 min-h-0 overflow-y-auto px-4 divide-y divide-slate-100">
+        {items.length === 0 && (
+          <li className="py-20 text-center space-y-2">
+            <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+              <Receipt className="w-6 h-6 stroke-1" />
+            </div>
+            <p className="text-xs font-bold text-slate-600">{t("emptyCart")}</p>
+            <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+              {bn ? "বাম পাশের তালিকা থেকে আইটেম স্পর্শ করুন বা বারকোড স্ক্যান করুন।" : "Scan barcode or select products to add to current order."}
+            </p>
+          </li>
+        )}
+
+        {items.map((it) => {
+          const isKg = it.unit === "kg";
+          return (
+            <li key={it.productId} className="py-3 space-y-2 bg-white px-3 my-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black text-slate-900 truncate">{it.name}</div>
+                  <div className="text-[11px] text-slate-500 tabular-nums mt-0.5">
+                    {money(it.unitPrice)} / {it.unit} ×{" "}
+                    <span className="font-bold text-blue-700">
+                      {formatQtyWithUnit(it.quantity, it.unit)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-black text-slate-900 tabular-nums">
+                    {money(it.unitPrice * it.quantity)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Stepper & Touch Controls */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <QuantityControl
+                  qty={it.quantity}
+                  max={it.stockQty}
+                  unit={it.unit}
+                  label={it.name}
+                  bn={bn}
+                  onChange={(n) => (n <= 0 ? removeItem(it.productId) : updateQuantity(it.productId, n))}
+                />
+
+                {/* Quick Weight & Quantity Chips */}
+                <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none]">
+                  {isKg ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(it.productId, 0.25)}
+                        className={cn(
+                          "px-2 py-1 rounded text-[11px] font-bold transition-all border shrink-0",
+                          it.quantity === 0.25
+                            ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {bn ? "২৫০ গ্রাম" : "250g"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(it.productId, 0.5)}
+                        className={cn(
+                          "px-2 py-1 rounded text-[11px] font-bold transition-all border shrink-0",
+                          it.quantity === 0.5
+                            ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {bn ? "৫০০ গ্রাম" : "500g"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(it.productId, 1)}
+                        className={cn(
+                          "px-2 py-1 rounded text-[11px] font-bold transition-all border shrink-0",
+                          it.quantity === 1
+                            ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                            : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {bn ? "১ কেজি" : "1 kg"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {[1, 2, 5, 10].map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => updateQuantity(it.productId, count)}
+                          className={cn(
+                            "px-2 py-1 rounded text-[11px] font-bold transition-all border shrink-0",
+                            it.quantity === count
+                              ? "bg-blue-600 text-white border-blue-600 shadow-2xs"
+                              : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                          )}
+                        >
+                          {bn ? `${toBnDigits(count)} পিস` : `${count} pcs`}
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Checkout Drawer Summary */}
+      {items.length > 0 && (
+        <div className="shrink-0 max-h-[62vh] overflow-y-auto border-t border-slate-200 p-4 space-y-3 bg-white shadow-lg">
+          {/* Packaging Boxes Accordion */}
+          {packagingBoxes.length > 0 && (
+            <details className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-xs">
+              <summary className="min-h-10 px-3 flex items-center justify-between cursor-pointer font-bold text-slate-700 select-none">
+                <span className="flex items-center gap-1.5">
+                  <Box className="w-3.5 h-3.5 text-slate-500" />
+                  {bn ? "মিষ্টির বক্স (ফ্রি)" : "Packaging boxes (free)"}
+                </span>
+                <span className="px-2 py-0.5 bg-slate-200 text-slate-800 rounded font-mono">
+                  {num(boxCount)}
+                </span>
+              </summary>
+              <div className="px-3 pb-3 pt-1 divide-y divide-slate-100 border-t border-slate-200/60 bg-white">
+                {packagingBoxes.map((b) => (
+                  <div key={b.id} className="py-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-slate-700 truncate">{b.name}</span>
+                    <Stepper
+                      shown={num(boxes[b.id] || 0)}
+                      qty={boxes[b.id] || 0}
+                      max={b.stockQty}
+                      label={b.name}
+                      onChange={(n) => setBoxQty(b.id, n)}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={autoAssignBoxes}
+                  className="mt-2 text-xs font-bold text-blue-700 hover:underline inline-block"
+                >
+                  {bn ? "ওজন অনুযায়ী স্বয়ংক্রিয় হিসাব" : "Auto-fill from weights"}
+                </button>
+              </div>
+            </details>
+          )}
+
+          {/* Subtotal & Discount Rows */}
+          <div className="space-y-1.5 text-xs text-slate-600">
+            <div className="flex items-center justify-between">
+              <span>{t("subtotal")}</span>
+              <span className="font-bold tabular-nums text-slate-800">{money(subtotal())}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="pos-discount" className="font-medium text-slate-700">
+                {t("discount")}
+              </label>
+              <input
+                id="pos-discount"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={subtotal()}
+                placeholder="0"
+                value={discount === 0 ? "" : discount}
+                className={cn(inputClass, "w-24 text-right font-bold")}
+                onChange={(e) =>
+                  setDiscount(Math.min(subtotal(), Math.max(0, Number(e.target.value) || 0)))
+                }
+              />
+            </div>
+          </div>
+
+          {/* Executive Register Total Display */}
+          <div className="p-3.5 bg-slate-900 text-white rounded-xl flex items-center justify-between shadow-xs">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                {t("totalAmount")}
+              </span>
+              <span className="text-xs text-slate-300">
+                {num(itemCount)} {t("itemCount")}
+              </span>
+            </div>
+            <div className="text-2xl font-black tabular-nums tracking-tight text-white">
+              {money(tot)}
+            </div>
+          </div>
+
+          {/* Payment Method Selector */}
+          <fieldset>
+            <legend className="text-xs font-bold text-slate-700 mb-1.5">{t("paymentMethod")}</legend>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {paymentAccounts.map((a) => {
+                const isSelected = selectedAccountId === a.id;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => {
+                      setSelectedAccountId(a.id);
+                      setPaymentMethod(a.type === "CASH" ? "Cash" : a.type === "MOBILE" ? "bKash" : "Bank");
+                    }}
+                    className={cn(
+                      "h-10 px-2 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all truncate",
+                      isSelected
+                        ? "bg-blue-600 border-blue-600 text-white shadow-xs"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    )}
+                  >
+                    {a.type === "CASH" && <Banknote className="w-3.5 h-3.5 shrink-0" />}
+                    {a.type === "MOBILE" && <Smartphone className="w-3.5 h-3.5 shrink-0" />}
+                    {a.type === "BANK" && <CreditCard className="w-3.5 h-3.5 shrink-0" />}
+                    <span className="truncate">{a.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Received Amount & Quick Cash */}
+          <div>
+            <label htmlFor="pos-received" className="text-xs font-bold text-slate-700 block mb-1">
+              {t("amountReceived")}
+            </label>
+            <input
+              id="pos-received"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              value={paid ?? ""}
+              placeholder={String(tot)}
+              className={cn(inputClass, "font-bold text-slate-900")}
+              onChange={(e) =>
+                setPaid(e.target.value === "" ? null : Math.max(0, Number(e.target.value)))
+              }
+            />
+            {paymentMethod === "Cash" && (
+              <div className="flex items-center gap-1.5 mt-2 overflow-x-auto [scrollbar-width:none]">
+                <button
+                  type="button"
+                  onClick={() => setPaid(null)}
+                  className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 shrink-0"
+                >
+                  {bn ? "ঠিক টাকা" : "Exact"}
+                </button>
+                {quickCash.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setPaid(v)}
+                    className="h-8 px-2.5 text-xs font-bold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 tabular-nums shrink-0"
+                  >
+                    {num(v)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Customer Name */}
+          <div>
+            <label htmlFor="pos-customer" className="text-xs font-bold text-slate-700 block mb-1">
+              {t("customerNameOptional")}
+            </label>
+            <input
+              id="pos-customer"
+              type="text"
+              value={customerName}
+              placeholder={t("walkInCustomer")}
+              className={inputClass}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+          </div>
+
+          {/* Financial Deltas: Change or Due */}
+          {change() > 0 && (
+            <div className="flex justify-between items-center text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-lg">
+              <span>{t("changeGiven")}</span>
+              <span className="tabular-nums font-black">{money(change())}</span>
+            </div>
+          )}
+          {due() > 0 && (
+            <div className="flex justify-between items-center text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+              <span>{t("creditDue")}</span>
+              <span className="tabular-nums font-black">{money(due())}</span>
+            </div>
+          )}
+
+          {/* Checkout CTA */}
           <button
             type="button"
-            onClick={() => setMobileTab("cart")}
-            className={cn(
-              "py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all relative",
-              mobileTab === "cart"
-                ? "bg-white text-slate-900 shadow-xs"
-                : "text-slate-500 hover:text-slate-900"
-            )}
+            onClick={checkout}
+            disabled={submitting}
+            className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-sm flex items-center justify-center gap-2 shadow-sm disabled:bg-blue-400 transition-all cursor-pointer"
           >
-            <ShoppingBag className="w-3.5 h-3.5" />
-            <span>{t("orderTab")}</span>
-            {totalItemCount > 0 && (
-              <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold ml-0.5">
-                {totalItemCount}
-              </span>
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{t("processingSale")}</span>
+              </>
+            ) : (
+              <>
+                <span>{t("completeSale")}</span>
+                <span>·</span>
+                <span className="tabular-nums">{money(tot)}</span>
+                <span className="text-[10px] font-mono opacity-70 bg-black/20 px-1.5 py-0.5 rounded">
+                  F9
+                </span>
+              </>
             )}
           </button>
         </div>
-      </div>
+      )}
+    </div>
+  );
 
-      {/* LEFT PANE: Product Catalog & Touch Grid */}
-      <div
-        className={cn(
-          "flex-1 min-h-0 lg:h-full flex-col border-r border-slate-200 overflow-hidden bg-white",
-          mobileTab === "products" ? "flex" : "hidden lg:flex"
-        )}
-      >
-        {/* Search & Barcode Input */}
-        <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="relative flex-1">
+  return (
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-100/60">
+      {/* Non-blocking Day Status Banner */}
+      {!sessionStatus?.isOpen && (
+        <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 flex items-center justify-between text-xs text-amber-900 font-medium shrink-0">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              {bn
+                ? "আজকের দিনের ট্রেডিং সেশন এখনও খোলা হয়নি — বিক্রয় অব্যাহত থাকবে এবং আজকের সেশনে যুক্ত হবে।"
+                : "Day session is not open yet — sales are allowed and will be attributed to today's session."}
+            </span>
+          </div>
+          <Link
+            href="/finance?tab=daily"
+            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded transition-colors shrink-0"
+          >
+            {bn ? "দিন শুরু করুন (Open Day)" : "Open Day"}
+          </Link>
+        </div>
+      )}
+
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Left Section: Product Browser */}
+        <section className="flex-1 min-w-0 flex flex-col">
+        {/* Search & Hotkey Header */}
+        <div className="p-3 bg-white border-b border-slate-200 shrink-0">
+          <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
-              ref={searchInputRef}
-              type="text"
+              ref={searchRef}
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
+              onKeyDown={onSearchKey}
               placeholder={t("searchProduct")}
-              className="w-full pl-9 pr-10 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              aria-label={t("searchProduct")}
+              className={cn(inputClass, "pl-9 pr-14 text-xs")}
             />
-            <Barcode className="w-5 h-5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  onClick={() => {
+                    setSearch("");
+                    searchRef.current?.focus();
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <span className="hidden sm:inline-block text-[10px] font-mono text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-bold">
+                F2
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Category Pills */}
-        <div className="px-3 sm:px-4 py-2 border-b border-slate-100 flex items-center gap-2 overflow-x-auto shrink-0 bg-slate-50/60 no-scrollbar">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory("all")}
-            className={cn(
-              "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-              selectedCategory === "all"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-            )}
-          >
-            {t("allCategories")}
-          </button>
-          {categories.map((c) => (
+        {/* Category Filter Pills */}
+        <div
+          role="tablist"
+          className="flex gap-2 p-3 bg-white border-b border-slate-200 overflow-x-auto shrink-0 [scrollbar-width:none]"
+        >
+          {[{ id: "all", name: t("allCategories") }, ...categories].map((c) => (
             <button
               key={c.id}
               type="button"
-              onClick={() => setSelectedCategory(c.id)}
+              role="tab"
+              aria-selected={category === c.id}
+              onClick={() => setCategory(c.id)}
               className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors",
-                selectedCategory === c.id
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                "h-8 px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all",
+                category === c.id
+                  ? "bg-slate-900 text-white shadow-2xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               )}
             >
               {c.name}
@@ -455,452 +979,119 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
           ))}
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1 p-3 sm:p-4 overflow-y-auto pb-24 lg:pb-4">
-          {filteredProducts.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-xs">
-              <ShoppingBag className="w-8 h-8 mb-2 stroke-1 text-slate-300" />
-              <span>No products match your search.</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
-              {filteredProducts.map((p) => {
-                const isOutOfStock = p.stockQty <= 0;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => addItem(p)}
-                    className={cn(
-                      "flex flex-col justify-between p-3 rounded-lg border text-left transition-all relative select-none min-h-[105px]",
-                      isOutOfStock
-                        ? "bg-slate-50 border-slate-200 opacity-50 cursor-not-allowed"
-                        : "bg-white border-slate-200 hover:border-blue-400 hover:shadow-xs active:scale-[0.98]"
-                    )}
-                  >
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-mono">
-                        {p.sku}
-                      </span>
-                      <h4 className="font-semibold text-slate-900 text-xs sm:text-sm line-clamp-2 mt-0.5 leading-snug">
-                        {p.name}
-                      </h4>
-                    </div>
-
-                    <div className="mt-2.5 flex items-baseline justify-between border-t border-slate-100 pt-2">
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm">
-                        {formatMoney(p.sellingPrice)}
-                      </span>
-                      <span
-                        className={cn(
-                          "text-[10px] font-medium px-1.5 py-0.5 rounded",
-                          isOutOfStock
-                            ? "bg-rose-100 text-rose-700 font-semibold"
-                            : p.stockQty <= 5
-                            ? "bg-amber-100 text-amber-700 font-semibold"
-                            : "bg-slate-100 text-slate-600"
-                        )}
-                      >
-                        {isOutOfStock
-                          ? language === "bn" ? "স্টক নেই" : "Out"
-                          : language === "bn" ? `${toBnDigits(p.stockQty)} স্টকে` : `${p.stockQty} in stock`}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Product Catalog Grid */}
+        <ul className="flex-1 overflow-y-auto p-3 pb-24 lg:pb-3 grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 content-start gap-2.5">
+          {visible.length === 0 && (
+            <li className="py-20 text-center text-slate-500 col-span-full">
+              {bn ? "কোনো পণ্য পাওয়া যায়নি।" : "No products found."}
+            </li>
           )}
-        </div>
+          {visible.map((p) => {
+            const out = p.stockQty <= 0;
+            const qty = qtyOf(p.id);
 
-        {/* MOBILE STICKY FLOATING ORDER BAR (When viewing catalog with items in cart) */}
-        {totalItemCount > 0 && mobileTab === "products" && (
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-xl z-30 flex items-center justify-between gap-3">
-            <div className="flex flex-col">
-              <span className="text-xs text-slate-500 font-medium">
-                {totalItemCount} {totalItemCount === 1 ? "item" : "items"}
-              </span>
-              <span className="text-base font-bold text-slate-900">
-                {formatMoney(total())}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setMobileTab("cart")}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold shadow-md transition-colors"
-            >
-              <span>{t("viewCartAndPay")}</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* RIGHT PANE: Cart & Checkout Summary */}
-      <div
-        className={cn(
-          "w-full lg:w-[420px] xl:w-[460px] flex-1 min-h-0 lg:flex-initial lg:h-full flex-col bg-white shrink-0 border-l border-slate-200 shadow-xs z-10 overflow-hidden",
-          mobileTab === "cart" ? "flex" : "hidden lg:flex"
-        )}
-      >
-        {/* Cart Header */}
-        <div className="p-3.5 sm:p-4 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            {/* Mobile back to products button */}
-            <button
-              type="button"
-              onClick={() => setMobileTab("products")}
-              className="lg:hidden p-1.5 -ml-1 text-slate-500 hover:text-slate-800 rounded-md"
-              title="Back to products catalog"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <h2 className="font-semibold text-slate-900 text-sm">{t("currentOrder")}</h2>
-            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
-              {totalItemCount} {t("itemCount")}
-            </span>
-          </div>
-          {items.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                clearCart();
-                setSelectedBoxes({});
-              }}
-              className="text-xs text-rose-600 hover:text-rose-700 font-medium transition-colors p-1"
-            >
-              {t("clearCart")}
-            </button>
-          )}
-        </div>
-
-        {/* Error notification */}
-        {error && (
-          <div className="m-3 p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-700 flex items-center gap-2 shrink-0 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span className="flex-1">{error}</span>
-          </div>
-        )}
-
-        {/* Cart Items List */}
-        <div className="flex-1 p-3 overflow-y-auto divide-y divide-slate-100 min-h-0">
-          {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 text-xs py-12">
-              <ShoppingBag className="w-10 h-10 mb-2 stroke-1 text-slate-300" />
-              <span>{t("emptyCart")}</span>
-              <button
-                type="button"
-                onClick={() => setMobileTab("products")}
-                className="mt-2 text-xs text-blue-600 font-semibold lg:hidden"
-              >
-                {t("browseCatalogPrompt")}
-              </button>
-            </div>
-          ) : (
-            items.map((item) => (
-              <div key={item.productId} className="py-2.5 flex items-center justify-between gap-2 sm:gap-3">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-semibold text-slate-900 truncate">{item.name}</h4>
-                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                    <span>{formatMoney(item.unitPrice, language)}</span>
-                    <span>×</span>
-                    <span className="font-semibold text-slate-800">
-                      {language === "bn" ? toBnDigits(item.quantity) : item.quantity}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Quantity Controls */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                    className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors"
-                    title="Decrease quantity"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="w-7 text-center text-xs font-semibold text-slate-900 tabular-nums">
-                    {language === "bn" ? toBnDigits(item.quantity) : item.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                    className="w-7 h-7 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded text-slate-600 transition-colors"
-                    title="Increase quantity"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Line Total & Remove */}
-                <div className="flex items-center gap-2 shrink-0 text-right">
-                  <span className="text-xs font-bold text-slate-900 tabular-nums min-w-[50px]">
-                    {formatMoney(item.unitPrice * item.quantity)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.productId)}
-                    className="text-slate-300 hover:text-rose-600 p-1 rounded transition-colors"
-                    title="Remove item"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-
-          {/* Display Complimentary Packaging Boxes in Cart Items List */}
-          {Object.entries(selectedBoxes).map(([boxId, qty]) => {
-            if (qty <= 0) return null;
-            const box = packagingBoxes.find((b) => b.id === boxId);
-            if (!box) return null;
             return (
-              <div
-                key={box.id}
-                className="py-2 px-2.5 flex items-center justify-between gap-2 bg-purple-50/70 border border-purple-200/80 rounded-md my-1.5 animate-in fade-in"
+              <li
+                key={p.id}
+                className={cn(
+                  "flex items-center gap-3 p-3 bg-white border rounded-xl transition-all shadow-2xs",
+                  qty > 0
+                    ? "border-blue-500/40 ring-1 ring-blue-500/20 bg-blue-50/20"
+                    : "border-slate-200 hover:border-slate-300"
+                )}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-1 rounded">
-                      {language === "bn" ? "ফ্রি বক্স" : "Free Box"}
+                <button
+                  type="button"
+                  disabled={out}
+                  onClick={() => addItem(p)}
+                  className="flex-1 min-w-0 text-left disabled:opacity-50 cursor-pointer"
+                >
+                  <div className="text-xs font-bold text-slate-900 truncate">{p.name}</div>
+                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                    <span className="font-black text-slate-900 tabular-nums">
+                      {money(p.sellingPrice)}
                     </span>
-                    <h4 className="text-xs font-semibold text-purple-950 truncate">{box.name}</h4>
+                    <span className="text-[11px] text-slate-400">/ {p.unit}</span>
+                    <span>•</span>
+                    {stockBadge(p)}
                   </div>
-                  <div className="text-[10px] text-purple-600 mt-0.5">
-                    {qty} {box.unit} • {language === "bn" ? "মিষ্টির সাথে প্যাকেজিং" : "Complimentary packaging"}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-purple-700 font-mono">৳0.00</span>
+                </button>
+
+                {qty > 0 ? (
+                  <QuantityControl
+                    qty={qty}
+                    max={p.stockQty}
+                    unit={p.unit}
+                    label={p.name}
+                    bn={bn}
+                    onChange={(n) => (n <= 0 ? removeItem(p.id) : updateQuantity(p.id, n))}
+                  />
+                ) : (
                   <button
                     type="button"
-                    onClick={() => handleUpdateBoxQty(box.id, 0)}
-                    className="text-slate-300 hover:text-rose-600 p-1"
-                    title="Remove packaging box"
+                    disabled={out}
+                    aria-label={`Add ${p.name}`}
+                    onClick={() => addItem(p)}
+                    className={btn}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
                   </button>
-                </div>
-              </div>
+                )}
+              </li>
             );
           })}
-        </div>
+        </ul>
+      </section>
 
-        {/* Calculation & Checkout Segment */}
-        {items.length > 0 && (
-          <div className="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 space-y-2.5 shrink-0 overflow-y-auto max-h-[60vh] lg:max-h-none">
-            {/* Complimentary Sweet Packaging Boxes Selector */}
-            {packagingBoxes.length > 0 && (
-              <div className="p-2.5 bg-purple-50/70 border border-purple-200 rounded-lg text-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-purple-900">
-                    <Package className="w-3.5 h-3.5 text-purple-600" />
-                    <span>
-                      {language === "bn" ? "মিষ্টির বক্স (প্যাকেজিং)" : "Sweet Packaging Boxes"}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={autoAssignBoxes}
-                    className="text-[10px] font-semibold text-purple-700 hover:text-purple-800 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded transition-colors"
-                    title="Auto-calculate boxes from sweet weight"
-                  >
-                    {language === "bn" ? "স্বয়ংক্রিয় হিসাব" : "Auto Calculate"}
-                  </button>
-                </div>
+      {/* Right Section: Executive Register Order Docket (Desktop) */}
+      <aside className="hidden lg:flex w-[400px] shrink-0 flex-col bg-white border-l border-slate-200 shadow-sm">
+        {header(false)}
+        {cartBody}
+      </aside>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {packagingBoxes.map((box) => {
-                    const qty = selectedBoxes[box.id] || 0;
-                    return (
-                      <div
-                        key={box.id}
-                        className={cn(
-                          "flex items-center justify-between p-1.5 rounded border text-xs transition-colors",
-                          qty > 0
-                            ? "bg-white border-purple-400 shadow-xs"
-                            : "bg-white/60 border-purple-100"
-                        )}
-                      >
-                        <div className="min-w-0 pr-1">
-                          <div className="font-semibold text-slate-800 truncate text-[11px]">
-                            {box.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            {language === "bn" ? "স্টক: " : "Stock: "}
-                            {box.stockQty} {box.unit}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <button
-                            type="button"
-                            disabled={qty <= 0}
-                            onClick={() => handleUpdateBoxQty(box.id, qty - 1)}
-                            className="w-5 h-5 rounded flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:pointer-events-none"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="w-5 text-center font-bold text-purple-900 tabular-nums text-xs">
-                            {qty}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={qty >= box.stockQty}
-                            onClick={() => handleUpdateBoxQty(box.id, qty + 1)}
-                            className="w-5 h-5 rounded flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white disabled:opacity-30 disabled:pointer-events-none"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Discount & Totals */}
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>{t("subtotal")}</span>
-                <span className="font-medium text-slate-800">{formatMoney(subtotal())}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-600">
-                <span>{t("discount")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  max={subtotal()}
-                  value={discount === 0 ? "" : discount}
-                  placeholder="0"
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setDiscount(val === "" ? 0 : Math.max(0, Number(val)));
-                  }}
-                  className="w-24 px-2 py-1 text-right text-xs bg-white border border-slate-300 rounded font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                />
-              </div>
-              <div className="flex justify-between text-sm font-bold text-slate-900 pt-1.5 border-t border-slate-200">
-                <span>{t("totalAmount")}</span>
-                <span className="text-base text-blue-700">{formatMoney(total())}</span>
-              </div>
+      {/* Mobile Floating Order Pill */}
+      {itemCount > 0 && (
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-center justify-between gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-white border-t border-slate-200 shadow-2xl">
+          <div>
+            <div className="text-xs font-bold text-slate-500">
+              {num(itemCount)} {t("itemCount")}
             </div>
-
-            {/* Payment Method Selector */}
-            <div className="space-y-1 pt-1">
-              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">
-                {t("paymentMethod")}
-              </span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {(["Cash", "bKash", "Bank"] as const).map((method) => {
-                  const isSelected = paymentMethod === method;
-                  return (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setPaymentMethod(method)}
-                      className={cn(
-                        "py-1.5 sm:py-2 px-2 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all border",
-                        isSelected
-                          ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                      )}
-                    >
-                      {method === "Cash" && <Banknote className="w-3.5 h-3.5" />}
-                      {method === "bKash" && <Smartphone className="w-3.5 h-3.5" />}
-                      {method === "Bank" && <CreditCard className="w-3.5 h-3.5" />}
-                      <span>{method === "Cash" ? t("cash") : method === "bKash" ? t("bkash") : t("bank")}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="text-base font-black text-slate-900 tabular-nums">
+              {money(tot)}
             </div>
-
-            {/* Tendered Amount (Cash Mode) or Partial Payment (Credit Mode) */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <label className="text-[10px] font-medium text-slate-500 block mb-1">
-                  {t("amountReceived")}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={paid !== null ? paid : ""}
-                  placeholder={total().toString()}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPaid(val === "" ? null : Math.max(0, Number(val)));
-                  }}
-                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 tabular-nums"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-medium text-slate-500 block mb-1">
-                  {t("customerNameOptional")}
-                </label>
-                <input
-                  type="text"
-                  value={customerName}
-                  placeholder={t("walkInCustomer")}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Change or Due indicator */}
-            {change() > 0 && (
-              <div className="flex justify-between items-center text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1.5 rounded border border-emerald-200">
-                <span>{t("changeGiven")}:</span>
-                <span className="text-sm font-bold">{formatMoney(change())}</span>
-              </div>
-            )}
-            {due() > 0 && (
-              <div className="flex justify-between items-center text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">
-                <span>{t("creditDue")}:</span>
-                <span className="text-sm font-bold">{formatMoney(due())}</span>
-              </div>
-            )}
-
-            {/* Checkout CTA Button */}
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={handleCheckout}
-              className={cn(
-                "w-full h-11 sm:h-12 mt-1 rounded-md font-bold text-xs sm:text-sm text-white shadow-md flex items-center justify-center gap-2 transition-all",
-                isSubmitting
-                  ? "bg-blue-400 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 active:scale-[0.99] focus:ring-2 focus:ring-blue-500"
-              )}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t("processingSale")}</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
-                  <span>{t("completeSale")} • {formatMoney(total())}</span>
-                </>
-              )}
-            </button>
           </div>
-        )}
-      </div>
+          <button
+            type="button"
+            onClick={() => setSheetOpen(true)}
+            className="h-11 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs shadow-md"
+          >
+            {t("viewCartAndPay")}
+          </button>
+        </div>
+      )}
 
-      {/* Printable Thermal Receipt Modal */}
+      {/* Mobile Cart Sheet */}
+      <Dialog.Root open={sheetOpen} onOpenChange={setSheetOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs lg:hidden" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="fixed z-50 inset-x-0 bottom-0 top-12 flex flex-col bg-white rounded-t-2xl lg:hidden focus:outline-none shadow-2xl"
+          >
+            {header(true)}
+            {cartBody}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Receipt Modal */}
       <PosReceiptModal
-        open={completedReceipt !== null}
-        receipt={completedReceipt}
-        onNewSale={() => setCompletedReceipt(null)}
+        open={receipt !== null}
+        receipt={receipt}
+        onNewSale={() => setReceipt(null)}
         shopProfile={shopProfile}
       />
+      </div>
     </div>
   );
 };

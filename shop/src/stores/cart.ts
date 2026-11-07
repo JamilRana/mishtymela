@@ -105,7 +105,9 @@ export const useCartStore = create<CartState>((set, get) => ({
       items: state.items.map((i) => {
         if (i.productId === productId) {
           const clamped = Math.min(quantity, i.stockQty);
-          return { ...i, quantity: clamped };
+          // Round to 3 decimal places to support precision scale weights down to the gram
+          const rounded = Math.round(clamped * 1000) / 1000;
+          return { ...i, quantity: rounded };
         }
         return i;
       }),
@@ -138,12 +140,13 @@ export const useCartStore = create<CartState>((set, get) => ({
     }),
 
   subtotal: () => {
-    return get().items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const raw = get().items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    return Math.round(raw * 100) / 100;
   },
 
   total: () => {
     const sub = get().subtotal();
-    return Math.max(0, sub - get().discount);
+    return Math.round(Math.max(0, sub - get().discount) * 100) / 100;
   },
 
   due: () => {

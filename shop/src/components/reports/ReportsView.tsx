@@ -160,32 +160,34 @@ export const ReportsView: React.FC<{ data: ReportsDataProps }> = ({ data }) => {
             <h3 className="text-sm font-semibold text-slate-900">Product Sales & Profitability</h3>
             <span className="text-xs text-slate-400">Top 10 items</span>
           </div>
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] tracking-wider">
-                <th className="pb-2">Product</th>
-                <th className="pb-2 text-right">Units</th>
-                <th className="pb-2 text-right">Revenue</th>
-                <th className="pb-2 text-right">Gross Profit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {topProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-slate-400">No sales data</td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[380px] text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 text-slate-500 uppercase text-xs tracking-wider font-semibold">
+                  <th className="pb-2">Product</th>
+                  <th className="pb-2 text-right">Units</th>
+                  <th className="pb-2 text-right">Revenue</th>
+                  <th className="pb-2 text-right">Gross Profit</th>
                 </tr>
-              ) : (
-                topProducts.map((p, i) => (
-                  <tr key={i} className="hover:bg-slate-50">
-                    <td className="py-2.5 font-medium text-slate-800">{p.name}</td>
-                    <td className="py-2.5 text-right font-semibold text-slate-600 tabular-nums">{p.qty}</td>
-                    <td className="py-2.5 text-right font-bold text-slate-900"><MoneyText amount={p.revenue} /></td>
-                    <td className="py-2.5 text-right font-bold text-emerald-600"><MoneyText amount={p.profit} /></td>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {topProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-slate-400">No sales data</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  topProducts.map((p, i) => (
+                    <tr key={i} className="hover:bg-slate-50">
+                      <td className="py-2.5 font-medium text-slate-800">{p.name}</td>
+                      <td className="py-2.5 text-right font-semibold text-slate-600 tabular-nums">{p.qty}</td>
+                      <td className="py-2.5 text-right font-bold text-slate-900"><MoneyText amount={p.revenue} /></td>
+                      <td className="py-2.5 text-right font-bold text-emerald-600"><MoneyText amount={p.profit} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Expenses by Category */}
@@ -205,7 +207,7 @@ export const ReportsView: React.FC<{ data: ReportsDataProps }> = ({ data }) => {
                     <div className="flex justify-between text-xs">
                       <span className="font-medium text-slate-800">{e.category}</span>
                       <span className="font-bold text-slate-900">
-                        {formatMoney(e.amount)} <span className="text-[10px] text-slate-400 font-normal">({pct.toFixed(0)}%)</span>
+                        {formatMoney(e.amount)} <span className="text-xs text-slate-400 font-normal">({pct.toFixed(0)}%)</span>
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">

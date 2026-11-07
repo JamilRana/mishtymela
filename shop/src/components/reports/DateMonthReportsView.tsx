@@ -32,7 +32,7 @@ import { MoneyText, formatMoney } from "@/components/shared/MoneyText";
 import { QuantityText } from "@/components/shared/QuantityText";
 import { toBnDigits } from "@/lib/bangla-numbers";
 import { getDateRangeReportAction, DateRangeReportFilter } from "@/actions/reports";
-import { useLanguageStore } from "@/stores/language";
+import { useHydratedLanguage } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { TableSkeleton, KpiCardSkeleton } from "@/components/shared/Skeleton";
 import { cn } from "@/lib/utils";
@@ -154,7 +154,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
   const [data, setData] = useState<ReportData>(initialData);
   const [isPending, startTransition] = useTransition();
 
-  const { language } = useLanguageStore();
+  const { language } = useHydratedLanguage();
   const storedShop = useOrganizationStore((s) => s.shopInfo);
   const activeShop = {
     name: shopProfile?.name || storedShop.name,
@@ -346,44 +346,44 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
     <div id="statement-printable" className="space-y-6">
       {/* Printable Shop Profile Statement Header */}
       <div className="hidden print:block pb-4 mb-4 border-b border-slate-300 text-center">
-        <h1 className="text-2xl font-bold text-slate-900">{activeShop.name}</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">{activeShop.name}</h1>
         {activeShop.address && <p className="text-xs text-slate-600 mt-1">{activeShop.address}</p>}
-        <div className="flex items-center justify-center gap-3 text-xs text-slate-500 font-mono mt-0.5">
+        <div className="flex items-center justify-center gap-3 text-xs text-slate-500 mt-0.5">
           {activeShop.phone && <span>মোবাইল: {activeShop.phone}</span>}
           {activeShop.vatNumber && <span>• {activeShop.vatNumber}</span>}
         </div>
         <div className="mt-3 py-1 px-3 bg-slate-100 rounded inline-block">
-          <p className="text-sm font-bold text-slate-800">
+          <p className="text-sm font-semibold text-slate-800">
             আয়-ব্যয়, সমাপনী স্থিতি ও লাভ-ক্ষতি বিবরণী
           </p>
-          <p className="text-xs text-slate-600 font-mono">
+          <p className="text-xs text-slate-600">
             সময়কাল: {data.label} ({data.startDateStr} — {data.endDateStr})
           </p>
         </div>
       </div>
 
       {/* Date & Month Selection Filter Header (Default = Today) */}
-      <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs space-y-4 print:hidden">
+      <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-4 print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-md bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+            <div className="w-9 h-9 rounded-md bg-red-50 text-red-600 flex items-center justify-center font-semibold">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-slate-900">সময়কাল ফিল্টার ও রিপোর্ট</h2>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 uppercase tracking-wider">
+                <h2 className="text-sm font-semibold text-slate-900">সময়কাল ফিল্টার ও রিপোর্ট</h2>
+                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">
                   Default: আজ
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                বর্তমান সময়কাল: <span className="font-semibold text-rose-700">{data.label}</span> ({data.startDateStr} — {data.endDateStr})
+                বর্তমান সময়কাল: <span className="font-semibold text-red-700">{data.label}</span> ({data.startDateStr} — {data.endDateStr})
               </p>
             </div>
           </div>
 
           {/* Quick Period Presets */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+          <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] text-sm">
             {(
               [
                 { id: "today", label: "আজ (Today)" },
@@ -400,10 +400,10 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 type="button"
                 onClick={() => handlePeriodChange(p.id)}
                 className={cn(
-                  "px-3 py-1.5 rounded-md transition-all cursor-pointer",
+                  "px-3 min-h-11 whitespace-nowrap border-b-2 cursor-pointer",
                   selectedPeriod === p.id
-                    ? "bg-white text-slate-900 shadow-xs font-bold text-rose-700"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "border-blue-600 text-slate-900 font-medium"
+                    : "border-transparent text-slate-600"
                 )}
               >
                 {p.label}
@@ -416,7 +416,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
         {selectedPeriod === "date_picker" && (
           <form
             onSubmit={handleSingleDateApply}
-            className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100 animate-in fade-in text-xs"
+            className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100 text-xs"
           >
             <div>
               <label className="text-slate-600 font-semibold block mb-1">যেকোনো তারিখ নির্বাচন করুন</label>
@@ -425,13 +425,13 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 required
                 value={singleDate}
                 onChange={(e) => setSingleDate(e.target.value)}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-md font-semibold text-slate-800"
+                className="h-11 px-3 text-base bg-white border border-slate-300 rounded-md text-slate-900"
               />
             </div>
             <button
               type="submit"
               disabled={isPending}
-              className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-md font-bold transition-colors cursor-pointer"
+              className="px-4 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white rounded-md font-medium cursor-pointer"
             >
               {isPending ? "লোড হচ্ছে..." : "রিপোর্ট দেখুন"}
             </button>
@@ -442,14 +442,14 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
         {selectedPeriod === "month_picker" && (
           <form
             onSubmit={handleMonthApply}
-            className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100 animate-in fade-in text-xs"
+            className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100 text-xs"
           >
             <div>
               <label className="text-slate-600 font-semibold block mb-1">মাস নির্বাচন করুন</label>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-md font-semibold text-slate-800"
+                className="h-11 px-3 text-base bg-white border border-slate-300 rounded-md text-slate-900"
               >
                 {months.map((m) => (
                   <option key={m.value} value={m.value}>
@@ -464,7 +464,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-md font-semibold text-slate-800"
+                className="h-11 px-3 text-base bg-white border border-slate-300 rounded-md text-slate-900"
               >
                 {[2024, 2025, 2026, 2027].map((y) => (
                   <option key={y} value={y}>
@@ -477,7 +477,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
             <button
               type="submit"
               disabled={isPending}
-              className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-md font-bold transition-colors cursor-pointer"
+              className="px-4 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white rounded-md font-medium cursor-pointer"
             >
               {isPending ? "লোড হচ্ছে..." : "মাসিক রিপোর্ট তৈরি করুন"}
             </button>
@@ -488,7 +488,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
         {selectedPeriod === "custom" && (
           <form
             onSubmit={handleCustomApply}
-            className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100 animate-in fade-in text-xs"
+            className="flex flex-wrap items-end gap-3 pt-3 border-t border-slate-100 text-xs"
           >
             <div>
               <label className="text-slate-600 font-semibold block mb-1">শুরুর তারিখ</label>
@@ -497,7 +497,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 required
                 value={customStart}
                 onChange={(e) => setCustomStart(e.target.value)}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-md font-semibold text-slate-800"
+                className="h-11 px-3 text-base bg-white border border-slate-300 rounded-md text-slate-900"
               />
             </div>
 
@@ -508,14 +508,14 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 required
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="px-3 py-1.5 bg-white border border-slate-300 rounded-md font-semibold text-slate-800"
+                className="h-11 px-3 text-base bg-white border border-slate-300 rounded-md text-slate-900"
               />
             </div>
 
             <button
               type="submit"
               disabled={isPending}
-              className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white rounded-md font-bold transition-colors cursor-pointer"
+              className="px-4 min-h-11 bg-blue-600 active:bg-blue-700 disabled:bg-blue-400 text-white rounded-md font-medium cursor-pointer"
             >
               {isPending ? "ফিল্টারিং..." : "তারিখ রেঞ্জ ফিল্টার"}
             </button>
@@ -524,7 +524,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
 
         {/* View Tabs */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
-          <div className="flex flex-wrap gap-1 border-b border-transparent">
+          <div className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
             {(
               [
                 { id: "statement", label: "সারসংক্ষেপ ও লাভ-ক্ষতি", icon: DollarSign },
@@ -543,9 +543,9 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer",
+                    "flex items-center gap-1.5 px-3 min-h-11 whitespace-nowrap rounded-md text-sm transition-colors cursor-pointer",
                     isActive
-                      ? "bg-rose-600 text-white shadow-xs"
+                      ? "bg-blue-600 text-white"
                       : "bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200"
                   )}
                 >
@@ -561,7 +561,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
             <button
               type="button"
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-md font-semibold text-xs transition-colors cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 min-h-11 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-md font-semibold text-xs transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>প্রিন্ট</span>
@@ -569,7 +569,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
             <button
               type="button"
               onClick={handleExportSummary}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-md font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 min-h-11 bg-slate-900 hover:bg-slate-800 text-white rounded-md font-semibold text-xs transition-colors cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
               <span>এক্সপোর্ট (CSV)</span>
@@ -580,7 +580,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
 
       {/* Loading Skeleton Transition */}
       {isPending && (
-        <div className="space-y-4 animate-in fade-in">
+        <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KpiCardSkeleton />
             <KpiCardSkeleton />
@@ -599,122 +599,122 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
             <div className="space-y-6">
               {/* KPI Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                  <span className="text-sm text-slate-600 block">
                     মোট বিক্রয় (Net Revenue)
                   </span>
                   <div className="mt-1 flex items-baseline justify-between">
-                    <span className="text-lg sm:text-xl font-bold text-slate-900">
+                    <span className="text-lg sm:text-xl font-semibold text-slate-900">
                       <MoneyText amount={summary.netRevenue} />
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">
+                    <span className="text-xs text-slate-500">
                       {toBnDigits(summary.ordersCount)} টি অর্ডার
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
+                  <span className="text-xs text-slate-500 mt-1 block">
                     গড় অর্ডার: {formatMoney(summary.averageOrderValue)}
                   </span>
                 </div>
 
-                <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                  <span className="text-sm text-slate-600 block">
                     উপাদান খরচ (COGS)
                   </span>
                   <div className="mt-1 flex items-baseline justify-between">
-                    <span className="text-lg sm:text-xl font-bold text-slate-700">
+                    <span className="text-lg sm:text-xl font-semibold text-slate-700">
                       <MoneyText amount={summary.cogs} />
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">
+                    <span className="text-xs text-slate-400">
                       {toBnDigits(summary.grossMargin)}% মার্জিন
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
+                  <span className="text-xs text-slate-500 mt-1 block">
                     মোট লাভ (Gross): {formatMoney(summary.grossProfit)}
                   </span>
                 </div>
 
-                <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                  <span className="text-sm text-slate-600 block">
                     অপারেশনাল খরচ (Expenses)
                   </span>
                   <div className="mt-1 flex items-baseline justify-between">
-                    <span className="text-lg sm:text-xl font-bold text-amber-700">
+                    <span className="text-lg sm:text-xl font-semibold text-amber-700">
                       <MoneyText amount={summary.totalExpenses} />
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">
+                    <span className="text-xs text-slate-400">
                       ভাড়া, বেতন, বিদ্যুৎ
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
+                  <span className="text-xs text-slate-500 mt-1 block">
                     অন্যান্য আয়: {formatMoney(summary.manualIncome || 0)}
                   </span>
                 </div>
 
-                <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                  <span className="text-sm text-slate-600 block">
                     নিট লাভ (Net Profit)
                   </span>
                   <div className="mt-1 flex items-baseline justify-between">
                     <span
                       className={cn(
-                        "text-lg sm:text-xl font-bold",
-                        summary.netProfit >= 0 ? "text-emerald-700" : "text-rose-600"
+                        "text-lg sm:text-xl font-semibold",
+                        summary.netProfit >= 0 ? "text-green-700" : "text-red-600"
                       )}
                     >
                       <MoneyText amount={summary.netProfit} />
                     </span>
-                    <span className="text-xs font-semibold text-emerald-600 font-mono">
+                    <span className="text-xs font-semibold text-green-600">
                       {toBnDigits(summary.netMargin)}% নিট
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
+                  <span className="text-xs text-slate-500 mt-1 block">
                     নগদ আদায়: {formatMoney(summary.totalPaid)} | বকেয়া: {formatMoney(summary.totalDue)}
                   </span>
                 </div>
               </div>
 
               {/* Profit & Loss Detailed Table */}
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900">
+                  <h3 className="text-sm font-semibold text-slate-900">
                     লাভ-ক্ষতি ও আয়-ব্যয় পূর্ণাঙ্গ বিবরণী (Income & P&L Statement)
                   </h3>
-                  <span className="text-xs font-mono text-slate-500 font-medium">{data.label}</span>
+                  <span className="text-xs text-slate-500 font-medium">{data.label}</span>
                 </div>
                 <div className="divide-y divide-slate-100 text-xs">
                   <div className="px-4 py-2.5 flex items-center justify-between">
                     <span className="font-medium text-slate-600">মোট প্রাথমিক বিক্রয় (Gross Sales)</span>
-                    <span className="font-semibold text-slate-900 font-mono"><MoneyText amount={summary.grossRevenue} /></span>
+                    <span className="font-semibold text-slate-900"><MoneyText amount={summary.grossRevenue} /></span>
                   </div>
                   <div className="px-4 py-2.5 flex items-center justify-between bg-slate-50/50">
                     <span className="text-slate-500">(-) মোট প্রদত্ত ডিসকাউন্ট (Discounts)</span>
-                    <span className="font-medium text-rose-600 font-mono">-<MoneyText amount={summary.totalDiscounts} /></span>
+                    <span className="font-medium text-red-600">-<MoneyText amount={summary.totalDiscounts} /></span>
                   </div>
-                  <div className="px-4 py-2.5 flex items-center justify-between font-bold bg-slate-100/70">
+                  <div className="px-4 py-2.5 flex items-center justify-between font-semibold bg-slate-100/70">
                     <span className="text-slate-800">(=) প্রকৃত নিট বিক্রয় (Net Sales Revenue)</span>
-                    <span className="text-slate-900 font-mono text-sm"><MoneyText amount={summary.netRevenue} /></span>
+                    <span className="text-slate-900 text-sm"><MoneyText amount={summary.netRevenue} /></span>
                   </div>
                   <div className="px-4 py-2.5 flex items-center justify-between bg-slate-50/50">
                     <span className="text-slate-600">(-) মিষ্টি তৈরিতে ব্যবহৃত কাঁচামাল খরচ (COGS)</span>
-                    <span className="font-medium text-amber-700 font-mono">-<MoneyText amount={summary.cogs} /></span>
+                    <span className="font-medium text-amber-700">-<MoneyText amount={summary.cogs} /></span>
                   </div>
-                  <div className="px-4 py-2.5 flex items-center justify-between font-bold bg-slate-50">
+                  <div className="px-4 py-2.5 flex items-center justify-between font-semibold bg-slate-50">
                     <span className="text-slate-800">(=) মোট ব্যবসায়িক লাভ (Gross Profit)</span>
-                    <span className="text-emerald-700 font-mono"><MoneyText amount={summary.grossProfit} /></span>
+                    <span className="text-green-700"><MoneyText amount={summary.grossProfit} /></span>
                   </div>
                   <div className="px-4 py-2.5 flex items-center justify-between bg-slate-50/50">
                     <span className="text-slate-600">(-) পরিচালন ও প্রশাসনিক খরচ (Operating Expenses)</span>
-                    <span className="font-medium text-amber-700 font-mono">-<MoneyText amount={summary.totalExpenses} /></span>
+                    <span className="font-medium text-amber-700">-<MoneyText amount={summary.totalExpenses} /></span>
                   </div>
                   {Number(summary.manualIncome || 0) > 0 && (
-                    <div className="px-4 py-2.5 flex items-center justify-between bg-emerald-50/30">
-                      <span className="text-emerald-700">(+) অন্যান্য অ-ব্যবসায়িক আয় (Other Income)</span>
-                      <span className="font-medium text-emerald-700 font-mono">+<MoneyText amount={summary.manualIncome || 0} /></span>
+                    <div className="px-4 py-2.5 flex items-center justify-between bg-green-50/30">
+                      <span className="text-green-700">(+) অন্যান্য অ-ব্যবসায়িক আয় (Other Income)</span>
+                      <span className="font-medium text-green-700">+<MoneyText amount={summary.manualIncome || 0} /></span>
                     </div>
                   )}
-                  <div className="px-4 py-3 flex items-center justify-between font-bold text-sm bg-emerald-50/70 text-emerald-950">
+                  <div className="px-4 py-3 flex items-center justify-between font-semibold text-sm bg-green-50/70 text-green-950">
                     <span>(=) দিন/মাস শেষে নিট ব্যবসায়িক লাভ (Net Operating Profit)</span>
-                    <span className="font-mono text-base text-emerald-700"><MoneyText amount={summary.netProfit} /></span>
+                    <span className=" text-base text-green-700"><MoneyText amount={summary.netProfit} /></span>
                   </div>
                 </div>
               </div>
@@ -727,37 +727,37 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
               {data.incomeVsExpense && (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                      <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="text-xs font-semibold text-green-800 block">
                         মোট প্রাপ্তি / আয় (Total Inflow & Income)
                       </span>
-                      <span className="text-2xl font-bold text-emerald-900 block mt-2">
+                      <span className="text-2xl font-semibold text-green-900 block mt-2">
                         <MoneyText amount={data.incomeVsExpense.totalIncome} />
                       </span>
-                      <div className="mt-2 text-xs text-emerald-700 space-y-0.5">
+                      <div className="mt-2 text-xs text-green-700 space-y-0.5">
                         <p>• বিক্রয় আয়: {formatMoney(data.incomeVsExpense.salesRevenue)}</p>
                         <p>• অন্যান্য আয়: {formatMoney(data.incomeVsExpense.manualIncome)}</p>
                       </div>
                     </div>
 
-                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
-                      <span className="text-xs font-bold text-rose-800 uppercase tracking-wider block">
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <span className="text-xs font-semibold text-red-800 block">
                         মোট ব্যয় ও খরচ (Total Outflow & Expenses)
                       </span>
-                      <span className="text-2xl font-bold text-rose-900 block mt-2">
+                      <span className="text-2xl font-semibold text-red-900 block mt-2">
                         <MoneyText amount={data.incomeVsExpense.totalExpense} />
                       </span>
-                      <div className="mt-2 text-xs text-rose-700 space-y-0.5">
+                      <div className="mt-2 text-xs text-red-700 space-y-0.5">
                         <p>• মিষ্টির কাঁচামাল (COGS): {formatMoney(data.incomeVsExpense.cogs)}</p>
                         <p>• সাধারণ পরিচালনা খরচ: {formatMoney(data.incomeVsExpense.operatingExpenses)}</p>
                       </div>
                     </div>
 
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block">
+                      <span className="text-xs font-semibold text-blue-800 block">
                         নিট উদ্বৃত্ত / লাভ (Net Surplus / Profit)
                       </span>
-                      <span className="text-2xl font-bold text-blue-900 block mt-2">
+                      <span className="text-2xl font-semibold text-blue-900 block mt-2">
                         <MoneyText amount={data.incomeVsExpense.netProfit} />
                       </span>
                       <div className="mt-2 text-xs text-blue-700 space-y-0.5">
@@ -768,18 +768,18 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                   </div>
 
                   {/* Visual Proportion Comparison Bar */}
-                  <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs space-y-3">
-                    <h3 className="text-sm font-bold text-slate-800">আয় বনাম ব্যয় অনুপাত (Income vs Expense Ratio)</h3>
+                  <div className="p-4 bg-white border border-slate-200 rounded-lg space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-800">আয় বনাম ব্যয় অনুপাত (Income vs Expense Ratio)</h3>
                     <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden flex">
                       <div
-                        className="bg-emerald-500 h-full"
+                        className="bg-green-500 h-full"
                         style={{
                           width: `${Math.max(5, Math.min(95, 100 - data.incomeVsExpense.expenseRatio))}%`,
                         }}
                         title={`লাভ/উদ্বৃত্ত`}
                       />
                       <div
-                        className="bg-rose-500 h-full"
+                        className="bg-red-500 h-full"
                         style={{
                           width: `${Math.max(5, Math.min(95, data.incomeVsExpense.expenseRatio))}%`,
                         }}
@@ -788,20 +788,20 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-600 font-medium">
                       <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />
+                        <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
                         নিট লাভ / উদ্বৃত্ত ({toBnDigits(Math.max(0, 100 - data.incomeVsExpense.expenseRatio))})%
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded-full bg-rose-500 inline-block" />
+                        <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
                         মোট খরচ অনুপাত ({toBnDigits(data.incomeVsExpense.expenseRatio)})%
                       </span>
                     </div>
                   </div>
 
                   {/* Expenses Category Breakdown */}
-                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                     <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                      <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      <h4 className="text-xs font-semibold text-slate-800">
                         খরচের খাতভিত্তিক বিবরণ (Expenses by Category)
                       </h4>
                     </div>
@@ -818,7 +818,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                               <div key={c.category} className="space-y-1">
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="font-semibold text-slate-700">{c.category}</span>
-                                  <span className="font-mono text-slate-900 font-bold">
+                                  <span className=" text-slate-900 font-semibold">
                                     <MoneyText amount={c.amount} /> ({toBnDigits(pct.toFixed(1))}%)
                                   </span>
                                 </div>
@@ -844,52 +844,52 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 <>
                   {/* Overall Closing Balance Header */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                    <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-sm text-slate-600 block">
                         শুরুর স্থিতি (Opening Balance)
                       </span>
-                      <span className="text-lg sm:text-xl font-bold text-slate-700 block mt-1">
+                      <span className="text-lg sm:text-xl font-semibold text-slate-700 block mt-1">
                         <MoneyText amount={data.closingBalanceSummary.openingTotal} />
                       </span>
-                      <span className="text-[10px] text-slate-400 mt-1 block">দিন/মাসের শুরুর ক্যাশ</span>
+                      <span className="text-xs text-slate-500 mt-1 block">দিন/মাসের শুরুর ক্যাশ</span>
                     </div>
 
-                    <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                    <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-sm text-slate-600 block">
                         (+) মোট নগদ/ডিজিটাল জমা
                       </span>
-                      <span className="text-lg sm:text-xl font-bold text-emerald-700 block mt-1">
+                      <span className="text-lg sm:text-xl font-semibold text-green-700 block mt-1">
                         +<MoneyText amount={data.closingBalanceSummary.inflowsTotal} />
                       </span>
-                      <span className="text-[10px] text-slate-400 mt-1 block">বিক্রয় ও অন্যান্য আদায়</span>
+                      <span className="text-xs text-slate-500 mt-1 block">বিক্রয় ও অন্যান্য আদায়</span>
                     </div>
 
-                    <div className="p-4 bg-white border border-slate-200 rounded-lg shadow-xs">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                    <div className="p-4 bg-white border border-slate-200 rounded-lg">
+                      <span className="text-sm text-slate-600 block">
                         (-) মোট নগদ প্রদান/খরচ
                       </span>
-                      <span className="text-lg sm:text-xl font-bold text-rose-700 block mt-1">
+                      <span className="text-lg sm:text-xl font-semibold text-red-700 block mt-1">
                         -<MoneyText amount={data.closingBalanceSummary.outflowsTotal} />
                       </span>
-                      <span className="text-[10px] text-slate-400 mt-1 block">খরচ ও ক্রয় বাবদ পেমেন্ট</span>
+                      <span className="text-xs text-slate-500 mt-1 block">খরচ ও ক্রয় বাবদ পেমেন্ট</span>
                     </div>
 
-                    <div className="p-4 bg-slate-900 text-white rounded-lg shadow-sm">
-                      <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider block">
+                    <div className="p-4 bg-slate-900 text-white rounded-lg">
+                      <span className="text-xs font-semibold text-slate-300 block">
                         (=) মোট সমাপনী স্থিতি (Closing)
                       </span>
-                      <span className="text-xl sm:text-2xl font-bold text-emerald-400 block mt-1">
+                      <span className="text-xl sm:text-2xl font-semibold text-green-400 block mt-1">
                         <MoneyText amount={data.closingBalanceSummary.closingTotal} />
                       </span>
-                      <span className="text-[10px] text-slate-400 mt-1 block">দিন/মাস শেষে মোট ব্যালেন্স</span>
+                      <span className="text-xs text-slate-400 mt-1 block">দিন/মাস শেষে মোট ব্যালেন্স</span>
                     </div>
                   </div>
 
                   {/* Per-Account Breakdown Table */}
-                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+                  <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                     <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-bold text-slate-900">
+                        <h3 className="text-sm font-semibold text-slate-900">
                           অ্যাকাউন্টভিত্তিক সমাপনী হিসাব (Cash Register & Account Ledger)
                         </h3>
                         <p className="text-xs text-slate-500">
@@ -906,59 +906,59 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                      <table className="w-full min-w-[640px] text-xs text-left">
+                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                           <tr>
                             <th className="py-2.5 px-4">অ্যাকাউন্টের নাম</th>
                             <th className="py-2.5 px-3">ধরন</th>
                             <th className="py-2.5 px-3 text-right">শুরুর স্থিতি (Opening)</th>
-                            <th className="py-2.5 px-3 text-right text-emerald-700">(+) মোট জমা</th>
-                            <th className="py-2.5 px-3 text-right text-rose-700">(-) মোট খরচ</th>
-                            <th className="py-2.5 px-4 text-right font-bold text-slate-900">সমাপনী স্থিতি (Closing)</th>
+                            <th className="py-2.5 px-3 text-right text-green-700">(+) মোট জমা</th>
+                            <th className="py-2.5 px-3 text-right text-red-700">(-) মোট খরচ</th>
+                            <th className="py-2.5 px-4 text-right font-semibold text-slate-900">সমাপনী স্থিতি (Closing)</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {data.closingBalanceSummary.accounts.map((acc) => (
                             <tr key={acc.id} className="hover:bg-slate-50/70 transition-colors">
                               <td className="py-3 px-4 font-semibold text-slate-800 flex items-center gap-2">
-                                {acc.type === "CASH" && <Banknote className="w-4 h-4 text-emerald-600" />}
+                                {acc.type === "CASH" && <Banknote className="w-4 h-4 text-green-600" />}
                                 {acc.type === "MOBILE" && <Smartphone className="w-4 h-4 text-pink-600" />}
                                 {acc.type === "BANK" && <Building2 className="w-4 h-4 text-blue-600" />}
                                 <span>{acc.name}</span>
                               </td>
-                              <td className="py-3 px-3 text-slate-500 uppercase font-mono text-[10px]">
+                              <td className="py-3 px-3 text-slate-500 text-xs">
                                 {acc.type}
                               </td>
-                              <td className="py-3 px-3 text-right font-mono text-slate-600">
+                              <td className="py-3 px-3 text-right text-slate-600">
                                 <MoneyText amount={acc.openingBalance} />
                               </td>
-                              <td className="py-3 px-3 text-right font-mono text-emerald-700 font-medium">
+                              <td className="py-3 px-3 text-right text-green-700 font-medium">
                                 +<MoneyText amount={acc.inflows} />
                               </td>
-                              <td className="py-3 px-3 text-right font-mono text-rose-700 font-medium">
+                              <td className="py-3 px-3 text-right text-red-700 font-medium">
                                 -<MoneyText amount={acc.outflows} />
                               </td>
-                              <td className="py-3 px-4 text-right font-mono font-bold text-sm text-slate-900">
+                              <td className="py-3 px-4 text-right font-semibold text-sm text-slate-900">
                                 <MoneyText amount={acc.closingBalance} />
                               </td>
                             </tr>
                           ))}
                         </tbody>
-                        <tfoot className="bg-slate-50 border-t-2 border-slate-300 font-bold text-xs">
+                        <tfoot className="bg-slate-50 border-t-2 border-slate-300 font-semibold text-xs">
                           <tr>
                             <td colSpan={2} className="py-3 px-4 text-slate-900">
                               সর্বমোট সমাপনী ব্যালেন্স
                             </td>
-                            <td className="py-3 px-3 text-right font-mono text-slate-700">
+                            <td className="py-3 px-3 text-right text-slate-700">
                               <MoneyText amount={data.closingBalanceSummary.openingTotal} />
                             </td>
-                            <td className="py-3 px-3 text-right font-mono text-emerald-700">
+                            <td className="py-3 px-3 text-right text-green-700">
                               +<MoneyText amount={data.closingBalanceSummary.inflowsTotal} />
                             </td>
-                            <td className="py-3 px-3 text-right font-mono text-rose-700">
+                            <td className="py-3 px-3 text-right text-red-700">
                               -<MoneyText amount={data.closingBalanceSummary.outflowsTotal} />
                             </td>
-                            <td className="py-3 px-4 text-right font-mono text-sm text-emerald-800">
+                            <td className="py-3 px-4 text-right text-sm text-green-800">
                               <MoneyText amount={data.closingBalanceSummary.closingTotal} />
                             </td>
                           </tr>
@@ -974,10 +974,10 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
           {/* TAB 4: MONTH-WISE REPORTING (মাসভিত্তিক রিপোর্ট) */}
           {activeTab === "monthly" && (
             <div className="space-y-6">
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-semibold text-slate-900">
                       চলতি বছরের মাসভিত্তিক বিক্রয় ও লাভ-ক্ষতি রিপোর্ট (Month-wise Performance)
                     </h3>
                     <p className="text-xs text-slate-500">
@@ -987,7 +987,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                   <button
                     type="button"
                     onClick={handleExportMonthly}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold text-xs transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 min-h-11 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold text-xs transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>মাসিক CSV</span>
@@ -995,15 +995,15 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <table className="w-full min-w-[720px] text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-4">মাস</th>
                         <th className="py-2.5 px-3 text-center">অর্ডার সংখ্যা</th>
                         <th className="py-2.5 px-3 text-right">বিক্রয় আয় (Revenue)</th>
                         <th className="py-2.5 px-3 text-right text-slate-600">উপাদান খরচ (COGS)</th>
                         <th className="py-2.5 px-3 text-right text-amber-700">অপারেশনাল খরচ</th>
-                        <th className="py-2.5 px-3 text-right font-bold text-slate-900">নিট লাভ (Net Profit)</th>
+                        <th className="py-2.5 px-3 text-right font-semibold text-slate-900">নিট লাভ (Net Profit)</th>
                         <th className="py-2.5 px-4 text-right">মার্জিন %</th>
                       </tr>
                     </thead>
@@ -1019,27 +1019,27 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                           <td className="py-3 px-4 font-semibold text-slate-800">
                             {m.monthLabelBn}
                           </td>
-                          <td className="py-3 px-3 text-center font-mono">
+                          <td className="py-3 px-3 text-center">
                             {toBnDigits(m.orders)}
                           </td>
-                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                          <td className="py-3 px-3 text-right font-semibold text-slate-900">
                             <MoneyText amount={m.revenue} />
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-600">
+                          <td className="py-3 px-3 text-right text-slate-600">
                             <MoneyText amount={m.cogs} />
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-amber-700">
+                          <td className="py-3 px-3 text-right text-amber-700">
                             <MoneyText amount={m.expenses} />
                           </td>
                           <td
                             className={cn(
-                              "py-3 px-3 text-right font-mono font-bold text-sm",
-                              m.profit >= 0 ? "text-emerald-700" : "text-rose-600"
+                              "py-3 px-3 text-right font-semibold text-sm",
+                              m.profit >= 0 ? "text-green-700" : "text-red-600"
                             )}
                           >
                             <MoneyText amount={m.profit} />
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-semibold">
+                          <td className="py-3 px-4 text-right font-semibold">
                             {toBnDigits(m.margin)}%
                           </td>
                         </tr>
@@ -1054,10 +1054,10 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
           {/* TAB 5: ITEM-WISE SWEET REPORTING (আইটেমভিত্তিক মিষ্টির বিক্রয় ও লাভ) */}
           {activeTab === "items" && (
             <div className="space-y-6">
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                 <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-semibold text-slate-900">
                       মিষ্টি ও আইটেমভিত্তিক লাভ-ক্ষতি (Item-wise Profitability)
                     </h3>
                     <p className="text-xs text-slate-500">
@@ -1074,30 +1074,30 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                         placeholder="মিষ্টি খুঁজুন..."
                         value={itemSearch}
                         onChange={(e) => setItemSearch(e.target.value)}
-                        className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-md focus:bg-white focus:outline-rose-600 w-44"
+                        className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-md focus:bg-white focus:outline-red-600 w-44"
                       />
                     </div>
 
                     {/* Sort buttons */}
-                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded text-[11px] font-semibold">
+                    <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded text-xs font-semibold">
                       <button
                         type="button"
                         onClick={() => setItemSortBy("revenue")}
-                        className={cn("px-2 py-1 rounded", itemSortBy === "revenue" && "bg-white shadow-xs font-bold text-rose-700")}
+                        className={cn("px-2 py-1 rounded", itemSortBy === "revenue" && "bg-white font-semibold text-red-700")}
                       >
                         বিক্রয়
                       </button>
                       <button
                         type="button"
                         onClick={() => setItemSortBy("qty")}
-                        className={cn("px-2 py-1 rounded", itemSortBy === "qty" && "bg-white shadow-xs font-bold text-rose-700")}
+                        className={cn("px-2 py-1 rounded", itemSortBy === "qty" && "bg-white font-semibold text-red-700")}
                       >
                         পরিমাণ
                       </button>
                       <button
                         type="button"
                         onClick={() => setItemSortBy("profit")}
-                        className={cn("px-2 py-1 rounded", itemSortBy === "profit" && "bg-white shadow-xs font-bold text-rose-700")}
+                        className={cn("px-2 py-1 rounded", itemSortBy === "profit" && "bg-white font-semibold text-red-700")}
                       >
                         লাভ
                       </button>
@@ -1114,15 +1114,15 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <table className="w-full min-w-[720px] text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-4">মিষ্টির নাম</th>
                         <th className="py-2.5 px-3">ক্যাটেগরি</th>
                         <th className="py-2.5 px-3 text-right">বিক্রিত পরিমাণ</th>
                         <th className="py-2.5 px-3 text-right">মোট বিক্রয় (Revenue)</th>
                         <th className="py-2.5 px-3 text-right text-slate-500">খরচ (COGS)</th>
-                        <th className="py-2.5 px-3 text-right font-bold text-emerald-800">লাভ (Gross Profit)</th>
+                        <th className="py-2.5 px-3 text-right font-semibold text-green-800">লাভ (Gross Profit)</th>
                         <th className="py-2.5 px-4 text-right">মার্জিন %</th>
                       </tr>
                     </thead>
@@ -1138,22 +1138,22 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                           <tr key={p.sku + p.name} className="hover:bg-slate-50/70 transition-colors">
                             <td className="py-3 px-4 font-semibold text-slate-900">
                               <span>{p.name}</span>
-                              {p.sku && <span className="block text-[10px] text-slate-400 font-mono">{p.sku}</span>}
+                              {p.sku && <span className="block text-xs text-slate-500 mt-0.5">{p.sku}</span>}
                             </td>
                             <td className="py-3 px-3 text-slate-500">{p.category || "-"}</td>
-                            <td className="py-3 px-3 text-right font-mono font-medium text-slate-800">
+                            <td className="py-3 px-3 text-right font-medium text-slate-800">
                               <QuantityText quantity={p.qty} unit={p.unit} />
                             </td>
-                            <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                            <td className="py-3 px-3 text-right font-semibold text-slate-900">
                               <MoneyText amount={p.revenue} />
                             </td>
-                            <td className="py-3 px-3 text-right font-mono text-slate-500">
+                            <td className="py-3 px-3 text-right text-slate-500">
                               <MoneyText amount={p.cost} />
                             </td>
-                            <td className="py-3 px-3 text-right font-mono font-bold text-emerald-700">
+                            <td className="py-3 px-3 text-right font-semibold text-green-700">
                               <MoneyText amount={p.profit} />
                             </td>
-                            <td className="py-3 px-4 text-right font-mono font-semibold text-slate-700">
+                            <td className="py-3 px-4 text-right font-semibold text-slate-700">
                               {toBnDigits(p.margin || 0)}%
                             </td>
                           </tr>
@@ -1169,10 +1169,10 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
           {/* TAB 6: PURCHASES OF RAW MATERIALS & BOXES */}
           {activeTab === "purchases" && (
             <div className="space-y-6">
-              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-xs">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">
+                    <h3 className="text-sm font-semibold text-slate-900">
                       কাঁচামাল ও মিষ্টির বক্স ক্রয় বিবরণী (Raw Materials & Sweet Boxes)
                     </h3>
                     <p className="text-xs text-slate-500">
@@ -1182,15 +1182,15 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <table className="w-full min-w-[720px] text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-4">তারিখ</th>
                         <th className="py-2.5 px-3">আইটেম</th>
                         <th className="py-2.5 px-3">ক্যাটেগরি</th>
                         <th className="py-2.5 px-3 text-right">পরিমাণ</th>
                         <th className="py-2.5 px-3 text-right">একক দর</th>
-                        <th className="py-2.5 px-4 text-right font-bold">মোট খরচ</th>
+                        <th className="py-2.5 px-4 text-right font-semibold">মোট খরচ</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1203,18 +1203,18 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                       ) : (
                         data.materialAndBoxPurchases.map((m) => (
                           <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-3 px-4 font-mono text-slate-500">
+                            <td className="py-3 px-4 text-slate-500">
                               {toBnDigits(m.createdAt.split("T")[0])}
                             </td>
                             <td className="py-3 px-3 font-semibold text-slate-900">{m.productName}</td>
                             <td className="py-3 px-3 text-slate-500">{m.categoryName}</td>
-                            <td className="py-3 px-3 text-right font-mono">
+                            <td className="py-3 px-3 text-right">
                               <QuantityText quantity={m.quantity} unit={m.unit} />
                             </td>
-                            <td className="py-3 px-3 text-right font-mono">
+                            <td className="py-3 px-3 text-right">
                               <MoneyText amount={m.unitCost} />
                             </td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                            <td className="py-3 px-4 text-right font-semibold text-slate-900">
                               <MoneyText amount={m.totalCost} />
                             </td>
                           </tr>
