@@ -14,6 +14,7 @@ import { UserManagerSection } from "@/components/settings/UserManagerSection";
 import { BrandSettingsSection } from "@/components/settings/BrandSettingsSection";
 import { UnitSettingsSection } from "@/components/settings/UnitSettingsSection";
 import { PrinterSettingsSection } from "@/components/settings/PrinterSettingsSection";
+import { BackupRestoreSection } from "@/components/settings/BackupRestoreSection";
 import { Wallet, Check } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +80,9 @@ export default async function SettingsPage() {
         <div className="bg-card border rounded-md p-5 shadow-sm">
           <PrinterSettingsSection printers={printers} />
         </div>
+
+        {/* Database Cloud Backup & Disaster Recovery (Vercel Blob & Neon Free Tier) */}
+        <BackupRestoreSection />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Dynamic Product Categories Management */}
