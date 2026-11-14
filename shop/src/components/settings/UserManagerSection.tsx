@@ -16,6 +16,7 @@ import {
   Phone,
   Mail,
   User,
+  Key,
 } from "lucide-react";
 import { Role } from "@prisma/client";
 import {
@@ -23,6 +24,7 @@ import {
   updateUserAction,
   toggleUserStatusAction,
   deleteUserAction,
+  resetUserPasswordAction,
 } from "@/actions/users";
 import { useRoleStore } from "@/stores/role";
 import { useHydratedLanguage } from "@/stores/language";
@@ -47,6 +49,9 @@ export const UserManagerSection: React.FC<{ users: StaffUser[] }> = ({
   const [users, setUsers] = useState<StaffUser[]>(initialUsers);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<StaffUser | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<StaffUser | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,6 +101,37 @@ export const UserManagerSection: React.FC<{ users: StaffUser[] }> = ({
       setUsers([...users, res.user]);
       setIsAddModalOpen(false);
       resetForm();
+    } else {
+      setError(res.error);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPasswordUser) return;
+
+    if (resetPasswordValue.trim().length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setResetPasswordSuccess(null);
+
+    const res = await resetUserPasswordAction({
+      userId: resetPasswordUser.id,
+      newPassword: resetPasswordValue.trim(),
+    });
+
+    setIsSubmitting(false);
+    if (res.success) {
+      setResetPasswordSuccess(res.message || "Password reset successfully.");
+      setTimeout(() => {
+        setResetPasswordUser(null);
+        setResetPasswordValue("");
+        setResetPasswordSuccess(null);
+      }, 1500);
     } else {
       setError(res.error);
     }
@@ -308,6 +344,19 @@ export const UserManagerSection: React.FC<{ users: StaffUser[] }> = ({
                       title="Edit staff details"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetPasswordUser({ ...u });
+                        setResetPasswordValue("");
+                        setError(null);
+                        setResetPasswordSuccess(null);
+                      }}
+                      className="p-1 text-slate-400 hover:text-amber-600 rounded transition-colors"
+                      title={isBn ? "পাসওয়ার্ড রিসেট করুন" : "Reset Password"}
+                    >
+                      <Key className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
@@ -589,6 +638,97 @@ export const UserManagerSection: React.FC<{ users: StaffUser[] }> = ({
                   className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md font-bold shadow-xs"
                 >
                   {isSubmitting ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Reset Password Modal */}
+      {resetPasswordUser && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <Key className="w-4 h-4 text-amber-600" />
+                <span>
+                  {isBn ? "পাসওয়ার্ড রিসেট: " : "Reset Password for: "}
+                  <span className="text-blue-600">{resetPasswordUser.name}</span>
+                </span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setResetPasswordUser(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {resetPasswordSuccess && (
+              <div className="mb-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{resetPasswordSuccess}</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-3 p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleResetPasswordSubmit} className="space-y-3 text-xs">
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded text-slate-600 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">{isBn ? "ইউজার ইমেইল" : "User Email"}:</span>
+                  <span className="font-mono font-medium text-slate-800">{resetPasswordUser.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">{isBn ? "ইউজার রোল" : "Assigned Role"}:</span>
+                  <span className="font-semibold text-slate-800">{resetPasswordUser.role}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-700 font-bold block mb-1">
+                  {isBn ? "নতুন পাসওয়ার্ড নির্ধারণ করুন" : "Set New Password"} *
+                </label>
+                <div className="relative">
+                  <Key className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder={isBn ? "কমপক্ষে ৬ অক্ষর" : "Minimum 6 characters"}
+                    value={resetPasswordValue}
+                    onChange={(e) => setResetPasswordValue(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-medium"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {isBn
+                    ? "রিসেট করার পর ব্যবহারকারী এই নতুন পাসওয়ার্ড দিয়ে তাৎক্ষণিক লগইন করতে পারবেন।"
+                    : "The staff member can immediately log in with this new password."}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setResetPasswordUser(null)}
+                  className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md font-semibold"
+                >
+                  {isBn ? "বাতিল" : "Cancel"}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400 text-white rounded-md font-bold shadow-xs flex items-center gap-1.5"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>{isSubmitting ? (isBn ? "রিসেট হচ্ছে..." : "Resetting...") : (isBn ? "পাসওয়ার্ড রিসেট করুন" : "Reset Password")}</span>
                 </button>
               </div>
             </form>

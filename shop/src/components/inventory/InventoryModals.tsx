@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   X,
@@ -14,6 +14,8 @@ import {
   Plus,
   Minus,
   Package,
+  Layers,
+  Factory,
 } from "lucide-react";
 import {
   receiveStockAction,
@@ -21,6 +23,8 @@ import {
   issueKitchenStockAction,
   reportWastageAction,
   recordSweetProductionAction,
+  bulkIssueFactoryAction,
+  recordMultiSweetProductionAction,
 } from "@/actions/inventory";
 import { useHydratedLanguage } from "@/stores/language";
 
@@ -65,6 +69,30 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync state whenever modal is opened or preselected item changes
+  useEffect(() => {
+    if (open) {
+      const targetId = preselectedProductId || products[0]?.id || "";
+      setProductId(targetId);
+      const targetProd = products.find((p) => p.id === targetId);
+      if (targetProd && targetProd.avgCost > 0) {
+        setUnitCost(String(targetProd.avgCost));
+      } else {
+        setUnitCost("");
+      }
+      setQuantity("");
+      setError(null);
+    }
+  }, [open, preselectedProductId]);
+
+  const handleProductSelect = (id: string) => {
+    setProductId(id);
+    const targetProd = products.find((p) => p.id === id);
+    if (targetProd && targetProd.avgCost > 0) {
+      setUnitCost(String(targetProd.avgCost));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +166,7 @@ export const ReceiveStockModal: React.FC<ReceiveStockModalProps> = ({
               <select
                 required
                 value={productId}
-                onChange={(e) => setProductId(e.target.value)}
+                onChange={(e) => handleProductSelect(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 {products.map((p) => (
@@ -398,26 +426,37 @@ interface IssueKitchenModalProps {
   products: ProductOption[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preselectedProductId?: string;
 }
 
 export const IssueKitchenModal: React.FC<IssueKitchenModalProps> = ({
   products,
   open,
   onOpenChange,
+  preselectedProductId,
 }) => {
   const { language } = useHydratedLanguage();
   // Filter raw materials first, or all products
-  const rawMaterials = products.filter(
-    (p) => p.productType === "RAW_MATERIAL" || p.sku.startsWith("RAW-")
+  const rawMaterials = useMemo(
+    () => products.filter((p) => p.productType === "RAW_MATERIAL" || p.sku.startsWith("RAW-")),
+    [products]
   );
   const eligibleProducts = rawMaterials.length > 0 ? rawMaterials : products;
 
-  const [productId, setProductId] = useState(eligibleProducts[0]?.id ?? "");
+  const [productId, setProductId] = useState(preselectedProductId || (eligibleProducts[0]?.id ?? ""));
   const [quantity, setQuantity] = useState("");
   const [karigorName, setKarigorName] = useState("");
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setProductId(preselectedProductId || (eligibleProducts[0]?.id ?? ""));
+      setQuantity("");
+      setError(null);
+    }
+  }, [open, preselectedProductId]);
 
   const selectedProduct = products.find((p) => p.id === productId) || eligibleProducts[0];
 
@@ -974,6 +1013,771 @@ export const ReportWastageModal: React.FC<ReportWastageModalProps> = ({
                   : language === "bn"
                   ? "অপচয় সমন্বয় করুন"
                   : "Record Wastage"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+
+/* -------------------------------------------------------------
+ * 4. BULK ISSUE FACTORY MODAL (একত্রে কারখানায় কাঁচামাল বরাদ্দ)
+ * (e.g. চিনি ৫০ কেজি, সয়াবিন তেল ২০ লিটার, দুধ ১০০ লিটার)
+ * ------------------------------------------------------------- */
+interface BulkIssueFactoryModalProps {
+  products: ProductOption[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const BulkIssueFactoryModal: React.FC<BulkIssueFactoryModalProps> = ({
+  products,
+  open,
+  onOpenChange,
+}) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
+  const rawMaterials = useMemo(
+    () => products.filter((p) => p.productType === "RAW_MATERIAL" || p.sku.startsWith("RAW-")),
+    [products]
+  );
+  const eligibleProducts = rawMaterials.length > 0 ? rawMaterials : products;
+
+  const [items, setItems] = useState<Array<{ productId: string; quantity: string }>>([
+    { productId: eligibleProducts[0]?.id || "", quantity: "" },
+  ]);
+  const [karigorName, setKarigorName] = useState("");
+  const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setItems([{ productId: eligibleProducts[0]?.id || "", quantity: "" }]);
+      setKarigorName("");
+      setNote("");
+      setError(null);
+    }
+  }, [open]);
+
+  const handleAddItem = () => {
+    setItems((prev) => [...prev, { productId: eligibleProducts[0]?.id || "", quantity: "" }]);
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleItemChange = (index: number, field: "productId" | "quantity", value: string) => {
+    setItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const validItems = items
+      .filter((i) => i.productId && Number(i.quantity) > 0)
+      .map((i) => ({ productId: i.productId, quantity: Number(i.quantity) }));
+
+    if (validItems.length === 0) {
+      setError(isBn ? "কমপক্ষে একটি কাঁচামাল ও পরিমাণ দিন" : "Please specify at least one raw material and quantity");
+      return;
+    }
+
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const res = await bulkIssueFactoryAction({
+        items: validItems,
+        karigorName: karigorName.trim() || undefined,
+        note: note.trim() || undefined,
+      });
+
+      if (!res.success) {
+        setError(res.error);
+        return;
+      }
+
+      onOpenChange(false);
+    } catch (err: any) {
+      setError(err?.message || "Failed to allocate raw materials to factory");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 animate-in fade-in" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-lg p-6 shadow-2xl border border-slate-200 z-50 animate-in zoom-in-95 focus:outline-none max-h-[92vh] overflow-y-auto">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-amber-100 text-amber-700 rounded-md">
+                <ChefHat className="w-5 h-5" />
+              </div>
+              <div>
+                <Dialog.Title className="text-base font-semibold text-slate-900">
+                  {isBn ? "কারখানায় কাঁচামাল বরাদ্দ (Bulk Factory Issue)" : "Bulk Allocate to Factory"}
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-slate-500">
+                  {isBn
+                    ? "একত্রে চিনি, তেল, দুধ ও অন্যান্য কাঁচামাল কারিগরকে মিষ্টি তৈরির জন্য বরাদ্দ করুন"
+                    : "Allocate sugar, oil, milk, and other materials to factory at once"}
+                </Dialog.Description>
+              </div>
+            </div>
+            <Dialog.Close asChild>
+              <button className="text-slate-400 hover:text-slate-600 p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </Dialog.Close>
+          </div>
+
+          {error && (
+            <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
+            {/* Karigor and Note Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="font-medium text-slate-700 block mb-1">
+                  {isBn ? "দায়িত্বপ্রাপ্ত কারিগরের নাম" : "Karigor / Head Chef"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBn ? "উদা: সুবল কারিগর / প্রধান শেফ" : "e.g. Master Chef Subol"}
+                  value={karigorName}
+                  onChange={(e) => setKarigorName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-medium text-slate-700 block mb-1">
+                  {isBn ? "ব্যাচ নোট বা বিবরণ" : "Batch Note / Purpose"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBn ? "উদা: সকালের মিষ্টি ব্যাচের জন্য বরাদ্দ" : "e.g. Morning batch production"}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Raw Material Rows */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                <span className="font-bold text-slate-700">
+                  {isBn ? "বরাদ্দকৃত কাঁচামালের তালিকা" : "Allocated Raw Materials"}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isBn ? "+ আরও কাঁচামাল যোগ করুন" : "+ Add Item"}</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {items.map((item, idx) => {
+                  const selProd = eligibleProducts.find((p) => p.id === item.productId);
+                  return (
+                    <div key={idx} className="flex items-center gap-2 bg-slate-50 p-2 rounded border border-slate-200">
+                      <div className="flex-1">
+                        <select
+                          required
+                          value={item.productId}
+                          onChange={(e) => handleItemChange(idx, "productId", e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-blue-500"
+                        >
+                          {eligibleProducts.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} — (স্টক: {p.stockQty} {p.unit})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="w-32">
+                        <input
+                          required
+                          type="number"
+                          step="any"
+                          min="0.1"
+                          placeholder={`পরিমাণ (${selProd?.unit || "unit"})`}
+                          value={item.quantity}
+                          onChange={(e) => handleItemChange(idx, "quantity", e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold tabular-nums text-right focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(idx)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="px-4 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                {isBn ? "বাতিল" : "Cancel"}
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? isBn ? "বরাদ্দ হচ্ছে..." : "Allocating..."
+                  : isBn ? "কারখানায় বরাদ্দ সম্পন্ন করুন" : "Confirm Allocation"}
+              </button>
+            </div>
+          </form>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+
+/* -------------------------------------------------------------
+ * 5. MULTI-SWEET PRODUCTION MODAL (কারখানা থেকে প্রস্তুতকৃত মিষ্টি স্টক ইন)
+ * Receive multiple sweet items produced from allocated materials
+ * ------------------------------------------------------------- */
+interface MultiSweetProductionModalProps {
+  products: ProductOption[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const MultiSweetProductionModal: React.FC<MultiSweetProductionModalProps> = ({
+  products,
+  open,
+  onOpenChange,
+}) => {
+  const { language } = useHydratedLanguage();
+  const isBn = language === "bn";
+
+  const retailSweets = useMemo(
+    () =>
+      products.filter(
+        (p) =>
+          p.isSellable ||
+          p.productType === "RETAIL" ||
+          p.sku.startsWith("SWT-") ||
+          p.sku.startsWith("DOI-")
+      ),
+    [products]
+  );
+  const eligibleSweets = retailSweets.length > 0 ? retailSweets : products;
+
+  const rawMaterials = useMemo(
+    () => products.filter((p) => p.productType === "RAW_MATERIAL" || p.sku.startsWith("RAW-")),
+    [products]
+  );
+
+  const [sourceMode, setSourceMode] = useState<"FROM_ALLOCATED" | "DIRECT_CONSUMPTION">("FROM_ALLOCATED");
+  const [producedItems, setProducedItems] = useState<Array<{ sweetProductId: string; quantity: string; unitCost: string }>>([
+    {
+      sweetProductId: eligibleSweets[0]?.id || "",
+      quantity: "",
+      unitCost: eligibleSweets[0]?.avgCost ? String(eligibleSweets[0].avgCost) : "",
+    },
+  ]);
+
+  // Ingredients when mode is DIRECT_CONSUMPTION
+  const [consumedIngredients, setConsumedIngredients] = useState<Array<{ productId: string; quantity: string }>>([]);
+
+  const [karigorName, setKarigorName] = useState("");
+  const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setSourceMode("FROM_ALLOCATED");
+      const defaultProd = eligibleSweets[0];
+      setProducedItems([
+        {
+          sweetProductId: defaultProd?.id || "",
+          quantity: "",
+          unitCost: defaultProd?.avgCost ? String(defaultProd.avgCost) : "",
+        },
+      ]);
+      setConsumedIngredients([]);
+      setKarigorName("");
+      setNote("");
+      setError(null);
+    }
+  }, [open]);
+
+  const handleModeChange = (mode: "FROM_ALLOCATED" | "DIRECT_CONSUMPTION") => {
+    setSourceMode(mode);
+    if (mode === "DIRECT_CONSUMPTION" && consumedIngredients.length === 0) {
+      const defaultRaw = rawMaterials[0] || products[0];
+      setConsumedIngredients([{ productId: defaultRaw?.id || "", quantity: "" }]);
+    }
+  };
+
+  const handleAddIngredient = () => {
+    const defaultRaw = rawMaterials[0] || products[0];
+    setConsumedIngredients((prev) => [
+      ...prev,
+      { productId: defaultRaw?.id || "", quantity: "" },
+    ]);
+  };
+
+  const handleRemoveIngredient = (index: number) => {
+    setConsumedIngredients((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleIngredientChange = (index: number, field: "productId" | "quantity", value: string) => {
+    setConsumedIngredients((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleAddSweet = () => {
+    const defaultProd = eligibleSweets[0];
+    setProducedItems((prev) => [
+      ...prev,
+      {
+        sweetProductId: defaultProd?.id || "",
+        quantity: "",
+        unitCost: defaultProd?.avgCost ? String(defaultProd.avgCost) : "",
+      },
+    ]);
+  };
+
+  const handleRemoveSweet = (index: number) => {
+    setProducedItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSweetChange = (index: number, field: "sweetProductId" | "quantity" | "unitCost", value: string) => {
+    setProducedItems((prev) => {
+      const next = [...prev];
+      if (field === "sweetProductId") {
+        const prod = products.find((p) => p.id === value);
+        next[index] = {
+          ...next[index],
+          sweetProductId: value,
+          unitCost: prod?.avgCost ? String(prod.avgCost) : next[index].unitCost,
+        };
+      } else {
+        next[index] = { ...next[index], [field]: value };
+      }
+      return next;
+    });
+  };
+
+  // Live Automatic Cost Calculations
+  const totalRawCost = useMemo(() => {
+    return consumedIngredients.reduce((acc, ing) => {
+      const p = products.find((prod) => prod.id === ing.productId);
+      const qty = Number(ing.quantity) || 0;
+      const cost = Number(p?.avgCost) || 0;
+      return acc + qty * cost;
+    }, 0);
+  }, [consumedIngredients, products]);
+
+  const totalProducedQty = useMemo(() => {
+    return producedItems.reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
+  }, [producedItems]);
+
+  const calculatedCostPerUnit =
+    totalProducedQty > 0 && totalRawCost > 0
+      ? Math.round(totalRawCost / totalProducedQty)
+      : null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const validProduced = producedItems
+      .filter((p) => p.sweetProductId && Number(p.quantity) > 0)
+      .map((p) => ({
+        sweetProductId: p.sweetProductId,
+        quantity: Number(p.quantity),
+        unitCost: p.unitCost ? Number(p.unitCost) : calculatedCostPerUnit ? calculatedCostPerUnit : undefined,
+      }));
+
+    if (validProduced.length === 0) {
+      setError(isBn ? "কমপক্ষে একটি মিষ্টি ও পরিমাণ প্রদান করুন" : "Please specify at least one finished sweet and quantity");
+      return;
+    }
+
+    const validConsumed = consumedIngredients
+      .filter((i) => i.productId && Number(i.quantity) > 0)
+      .map((i) => ({ productId: i.productId, quantity: Number(i.quantity) }));
+
+    if (sourceMode === "DIRECT_CONSUMPTION" && validConsumed.length === 0) {
+      setError(isBn ? "সরাসরি উৎপাদনের জন্য ব্যবহৃত কাঁচামাল ও পরিমাণ দিন" : "Please specify consumed raw materials");
+      return;
+    }
+
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const res = await recordMultiSweetProductionAction({
+        producedItems: validProduced,
+        consumedIngredients: validConsumed.length > 0 ? validConsumed : undefined,
+        sourceMode,
+        karigorName: karigorName.trim() || undefined,
+        note: note.trim() || undefined,
+      });
+
+      if (!res.success) {
+        setError(res.error);
+        return;
+      }
+
+      onOpenChange(false);
+    } catch (err: any) {
+      setError(err?.message || "Failed to record production batch");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 animate-in fade-in" />
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-xl bg-white rounded-lg p-6 shadow-2xl border border-slate-200 z-50 animate-in zoom-in-95 focus:outline-none max-h-[92vh] overflow-y-auto">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-emerald-100 text-emerald-700 rounded-md">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <Dialog.Title className="text-base font-semibold text-slate-900">
+                  {isBn ? "প্রস্তুতকৃত মিষ্টি কাউন্টারে গ্রহণ (Production Receipt)" : "Receive Produced Sweets"}
+                </Dialog.Title>
+                <Dialog.Description className="text-xs text-slate-500">
+                  {isBn
+                    ? "কারখানায় তৈরিকৃত মিষ্টি কাউন্টারের বিক্রয়যোগ্য স্টকে যোগ করুন"
+                    : "Add freshly produced sweets from kitchen directly into counter stock"}
+                </Dialog.Description>
+              </div>
+            </div>
+            <Dialog.Close asChild>
+              <button className="text-slate-400 hover:text-slate-600 p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </Dialog.Close>
+          </div>
+
+          {error && (
+            <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Mode Switcher */}
+          <div className="mt-4 p-3 bg-blue-50/70 border border-blue-200 rounded-lg text-xs space-y-2">
+            <span className="font-bold text-blue-900 block">
+              {isBn ? "কাঁচামালের উৎস নির্ধারণ করুন:" : "Production Source Mode:"}
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSourceMode("FROM_ALLOCATED")}
+                className={`p-2.5 rounded text-left border transition-all ${
+                  sourceMode === "FROM_ALLOCATED"
+                    ? "bg-white border-blue-600 text-blue-950 shadow-xs font-semibold"
+                    : "bg-transparent border-transparent text-slate-600 hover:bg-white/50"
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold">
+                  <span className={`w-2 h-2 rounded-full ${sourceMode === "FROM_ALLOCATED" ? "bg-blue-600" : "bg-slate-300"}`} />
+                  <span>{isBn ? "পূর্বে বরাদ্দকৃত কাঁচামাল থেকে" : "From Pre-Allocated Stock"}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                  {isBn
+                    ? "চিনি, তেল ও দুধ আগেই কারখানায় বরাদ্দ করা হয়েছে। পুনরায় কাঁচামাল কাটা হবে না।"
+                    : "Raw materials were already issued to kitchen. No extra deduction."}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSourceMode("DIRECT_CONSUMPTION")}
+                className={`p-2.5 rounded text-left border transition-all ${
+                  sourceMode === "DIRECT_CONSUMPTION"
+                    ? "bg-white border-blue-600 text-blue-950 shadow-xs font-semibold"
+                    : "bg-transparent border-transparent text-slate-600 hover:bg-white/50"
+                }`}
+              >
+                <div className="flex items-center gap-1.5 font-bold">
+                  <span className={`w-2 h-2 rounded-full ${sourceMode === "DIRECT_CONSUMPTION" ? "bg-blue-600" : "bg-slate-300"}`} />
+                  <span>{isBn ? "সরাসরি কাঁচামাল সহ উৎপাদন" : "Direct All-in-One Run"}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                  {isBn
+                    ? "মিষ্টির সাথে সাথে ব্যবহৃত কাঁচামালও এখন স্টক থেকে কাটা হবে।"
+                    : "Deduct consumed ingredients in this same step."}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
+            {/* Karigor and Note */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="font-medium text-slate-700 block mb-1">
+                  {isBn ? "প্রস্তুতকারী কারিগরের নাম" : "Karigor / Maker Name"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBn ? "উদা: সুবল কারিগর" : "e.g. Subol"}
+                  value={karigorName}
+                  onChange={(e) => setKarigorName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="font-medium text-slate-700 block mb-1">
+                  {isBn ? "উৎপাদন ব্যাচ নোট" : "Production Batch Note"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isBn ? "উদা: আজকের সকালের ফ্রেশ মিষ্টি" : "e.g. Fresh morning production"}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Consumed Raw Materials Section (Visible when DIRECT_CONSUMPTION is active) */}
+            {sourceMode === "DIRECT_CONSUMPTION" && (
+              <div className="space-y-2 p-3 bg-amber-50/70 border border-amber-200 rounded-lg">
+                <div className="flex items-center justify-between pb-1 border-b border-amber-200/60">
+                  <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-amber-700" />
+                    <span>{isBn ? "ব্যবহৃত কাঁচামালের তালিকা (Raw Materials Consumed) *" : "Consumed Raw Materials *"}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddIngredient}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 hover:text-amber-950"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{isBn ? "+ কাঁচামাল যোগ করুন" : "+ Add Ingredient"}</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {consumedIngredients.map((ing, idx) => {
+                    const selRaw = (rawMaterials.length > 0 ? rawMaterials : products).find((p) => p.id === ing.productId);
+                    const rawCost = Number(selRaw?.avgCost) || 0;
+                    const lineCost = (Number(ing.quantity) || 0) * rawCost;
+
+                    return (
+                      <div key={idx} className="flex items-center gap-2 bg-white p-2 rounded border border-amber-200">
+                        <div className="flex-1">
+                          <select
+                            required
+                            value={ing.productId}
+                            onChange={(e) => handleIngredientChange(idx, "productId", e.target.value)}
+                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-medium focus:ring-1 focus:ring-amber-500"
+                          >
+                            {(rawMaterials.length > 0 ? rawMaterials : products).map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name} — (স্টক: {p.stockQty} {p.unit} | খরচ: ৳{Math.round(p.avgCost)})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-28">
+                          <input
+                            required
+                            type="number"
+                            step="any"
+                            min="0.01"
+                            placeholder={`পরিমাণ (${selRaw?.unit || "unit"})`}
+                            value={ing.quantity}
+                            onChange={(e) => handleIngredientChange(idx, "quantity", e.target.value)}
+                            className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs font-bold tabular-nums text-right focus:ring-1 focus:ring-amber-500"
+                          />
+                        </div>
+
+                        <div className="w-24 text-right font-mono text-[11px] text-amber-800 font-semibold tabular-nums">
+                          ৳ {Math.round(lineCost)}
+                        </div>
+
+                        {consumedIngredients.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIngredient(idx)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                            title="Remove ingredient"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Auto Cost Calculation Summary */}
+                <div className="flex items-center justify-between pt-1.5 border-t border-amber-200 text-xs text-amber-900 font-semibold">
+                  <span>{isBn ? "মোট কাঁচামাল খরচ:" : "Total Raw Material Cost:"}</span>
+                  <span className="tabular-nums font-bold text-sm">৳ {Math.round(totalRawCost)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Finished Sweets List */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                <div>
+                  <span className="font-bold text-slate-700">
+                    {isBn ? "প্রস্তুতকৃত মিষ্টির তালিকা (Finished Sweets)" : "Produced Sweets"}
+                  </span>
+                  <p className="text-[11px] text-slate-500">
+                    {sourceMode === "DIRECT_CONSUMPTION" && calculatedCostPerUnit
+                      ? isBn
+                        ? `প্রতি কেজির স্বয়ংক্রিয় উৎপাদন খরচ: ৳ ${calculatedCostPerUnit}`
+                        : `Auto-calculated unit cost: $${calculatedCostPerUnit}`
+                      : isBn
+                      ? "উৎপাদন খরচ পূর্বে সংরক্ষিত গড় খরচে স্বয়ংক্রিয়ভাবে হিসাব হবে"
+                      : "Unit cost is automatically derived from weighted average"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddSweet}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isBn ? "+ আরও মিষ্টি যোগ করুন" : "+ Add Sweet Item"}</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {producedItems.map((item, idx) => {
+                  const selSweet = eligibleSweets.find((p) => p.id === item.sweetProductId);
+                  const effectiveUnitCost =
+                    calculatedCostPerUnit ||
+                    (selSweet?.avgCost ? Math.round(selSweet.avgCost) : 0);
+
+                  return (
+                    <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-slate-50 p-2.5 rounded border border-slate-200">
+                      <div className="flex-1">
+                        <select
+                          required
+                          value={item.sweetProductId}
+                          onChange={(e) => handleSweetChange(idx, "sweetProductId", e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-semibold focus:ring-1 focus:ring-blue-500"
+                        >
+                          {eligibleSweets.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} — (বর্তমান মজুদ: {p.stockQty} {p.unit})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="w-full sm:w-36">
+                        <input
+                          required
+                          type="number"
+                          step="any"
+                          min="0.1"
+                          placeholder={`পরিমাণ (${selSweet?.unit || "কেজি"})`}
+                          value={item.quantity}
+                          onChange={(e) => handleSweetChange(idx, "quantity", e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold tabular-nums text-right focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      {/* Unit Cost: Auto-suggested from raw materials / historical average, but editable for labor/overhead overrides */}
+                      <div className="w-full sm:w-32 relative">
+                        <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400 text-xs">
+                          ৳
+                        </div>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder={String(effectiveUnitCost || 0)}
+                          value={item.unitCost}
+                          onChange={(e) => handleSweetChange(idx, "unitCost", e.target.value)}
+                          className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold tabular-nums text-right focus:ring-1 focus:ring-blue-500"
+                          title={isBn ? "প্রতি কেজির উৎপাদন খরচ (স্বয়ংক্রিয় বা কাস্টম)" : "Unit production cost (auto-calculated or custom override)"}
+                        />
+                        <span className="text-[10px] text-slate-400 block text-right pr-1">
+                          {item.unitCost ? (isBn ? "কাস্টম খরচ" : "custom") : (isBn ? "স্বয়ংক্রিয়" : "auto")}
+                        </span>
+                      </div>
+
+                      {producedItems.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSweet(idx)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors self-end sm:self-center"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="px-4 py-2 border border-slate-200 rounded text-xs font-medium text-slate-600 hover:bg-slate-50"
+              >
+                {isBn ? "বাতিল" : "Cancel"}
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold shadow-xs disabled:opacity-50"
+              >
+                {isSubmitting
+                  ? isBn ? "স্টক ইন হচ্ছে..." : "Processing..."
+                  : isBn ? "কাউন্টারে স্টক ইন সম্পন্ন করুন" : "Add to Counter Stock"}
               </button>
             </div>
           </form>

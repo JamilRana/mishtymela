@@ -59,6 +59,24 @@ const PAGE_TRANSLATIONS: Record<
     descBn: "দোকানের প্রোফাইল, যোগাযোগের তথ্য, স্টাফ রোল, মিষ্টির ক্যাটেগরি ও পেমেন্ট অ্যাকাউন্ট",
     descEn: "Configure shop profile, contact info, staff roles, dynamic sweet & raw material categories, and payment accounts",
   },
+  "Contacts & Directory": {
+    titleBn: "কন্টাক্টস ও পার্টনার ডিরেক্টরি",
+    titleEn: "Contacts & Directory",
+    descBn: "কাস্টমার, কাঁচামাল সাপ্লাইয়ার এবং দোকানের কর্মচারীদের তথ্য, বাকি হিসাব ও বেতন প্রোফাইল",
+    descEn: "Manage customers, raw material suppliers, and employee profiles, credit dues, and salary ledger",
+  },
+  "Purchases & Goods Inward": {
+    titleBn: "ক্রয় খাতা ও মালামাল গ্রহণ",
+    titleEn: "Purchases & Goods Inward",
+    descBn: "কাঁচামাল ও মিষ্টি গ্রহণ (GRN), সাপ্লাইয়ার চালান, গড় ক্রয়মূল্য (WAC) আপডেট ও বিল পরিশোধ",
+    descEn: "Goods received notes (GRN), supplier challan invoices, weighted-average cost updates, and bills",
+  },
+  "Due Ledger & Outstanding Credit": {
+    titleBn: "বাকি খাতা (কাস্টমার ও সাপ্লাইয়ার)",
+    titleEn: "Due Ledger & Outstanding Credit",
+    descBn: "কাস্টমার বাকি আদায়, সাপ্লাইয়ার বাকি পরিশোধ, বাকি সীমা ট্র্যাকিং ও দেনা-পাওনা বিবরণী",
+    descEn: "Customer credit receivables, supplier payables, due collection & disbursement, and aging ledgers",
+  },
 };
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -82,14 +100,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     : (mapped?.descEn || description);
 
   return (
-    <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200 mb-6", className)}>
+    <div className={cn("flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-5 border-b border-[var(--rule)] mb-5", className)}>
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">{displayTitle}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[var(--ink)] tracking-tight">{displayTitle}</h1>
         {displayDescription && (
-          <p className="text-sm sm:text-base font-medium text-slate-600 mt-1">{displayDescription}</p>
+          <p className="text-xs sm:text-sm text-[var(--ink-2)] mt-1 font-normal leading-relaxed">{displayDescription}</p>
         )}
       </div>
-      {actions && <div className="flex items-center gap-3">{actions}</div>}
+      {actions && <div className="flex items-center gap-2.5 shrink-0">{actions}</div>}
     </div>
   );
 };

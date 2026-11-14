@@ -27,7 +27,6 @@ export default async function HomePage() {
     where: {
       isSellable: true,
       active: true,
-      sku: { not: "DEMO-001" },
     },
     include: {
       category: true,
@@ -41,9 +40,12 @@ export default async function HomePage() {
   const products: ShowcaseProduct[] = rawProducts.map((p) => ({
     id: p.id,
     name: p.name,
+    sku: p.sku || `SWT-${p.id.slice(0, 4).toUpperCase()}`,
     unit: p.unit,
     imageUrl: p.imageUrl,
     sellingPrice: Number(p.sellingPrice),
+    avgCost: Number(p.avgCost || 0),
+    reorderLevel: Number(p.reorderLevel || 5),
     categoryName: p.category?.name ?? "Special Sweets",
     categoryId: p.categoryId,
     stockQty: Number(p.stockQty),

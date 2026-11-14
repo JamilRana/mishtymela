@@ -13,9 +13,13 @@ export async function getStockMovements() {
 
   const movements = await prisma.stockMovement.findMany({
     where: { organizationId: orgId },
-    include: { product: true },
+    include: {
+      product: {
+        select: { name: true, sku: true },
+      },
+    },
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 60,
   });
 
   return movements.map((m) => ({
@@ -236,4 +240,156 @@ export async function recordSweetProductionAction(data: {
 
     return result;
   }, "Failed to record sweet production batch.");
+}
+
+/**
+ * Bulk Allocation of multiple raw materials to Factory/Kitchen at once.
+ * (e.g. চিনি ৫০ কেজি, সয়াবিন তেল ২০ লিটার, দুধ ১০০ লিটার)
+ */
+export async function bulkIssueFactoryAction(data: {
+  items: Array<{ productId: string; quantity: number }>;
+  karigorName?: string;
+  note?: string;
+}) {
+  return handleAction("bulkIssueFactoryAction", async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    const validItems = data.items.filter((i) => i.productId && Number(i.quantity) > 0);
+    if (validItems.length === 0) {
+      throw new Error("অন্তত একটি কাঁচামাল এবং পরিমাণ নির্ধারণ করুন (At least one item required)");
+    }
+
+    const batchNote = `[Factory Allocation / কারখানায় বরাদ্দ] ${
+      data.karigorName ? `কারিগর: ${data.karigorName.trim()} • ` : ""
+    }${data.note?.trim() || "মিষ্টি তৈরির জন্য কাঁচামাল বরাদ্দ"}`;
+
+    await prisma.$transaction(async (tx) => {
+      for (const item of validItems) {
+        await applyMovement(tx, {
+          orgId,
+          productId: item.productId,
+          type: "PRODUCTION",
+          qty: -Math.abs(Number(item.quantity)),
+          note: batchNote,
+          refType: "factory_issue",
+        });
+      }
+    }, TX_OPTIONS);
+
+    try {
+      revalidatePath("/inventory");
+      revalidatePath("/products");
+      revalidatePath("/dashboard");
+      revalidatePath("/reports");
+      revalidatePath("/pos");
+    } catch {}
+
+    return { success: true, count: validItems.length };
+  }, "Failed to issue raw materials to factory.");
+}
+
+/**
+ * Multi-Item Sweet Production Batch:
+ * Receive multiple finished sweet items into retail counter stock.
+ * In 'FROM_ALLOCATED' mode, raw materials were already issued, so this credits finished stock without double-deduction.
+ */
+export async function recordMultiSweetProductionAction(data: {
+  producedItems: Array<{ sweetProductId: string; quantity: number; unitCost?: number }>;
+  consumedIngredients?: Array<{ productId: string; quantity: number }>;
+  sourceMode: "FROM_ALLOCATED" | "DIRECT_CONSUMPTION";
+  karigorName?: string;
+  note?: string;
+}) {
+  return handleAction("recordMultiSweetProductionAction", async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    const validProduced = data.producedItems.filter(
+      (p) => p.sweetProductId && Number(p.quantity) > 0
+    );
+    if (validProduced.length === 0) {
+      throw new Error("অন্তত একটি উৎপাদিত মিষ্টি ও পরিমাণ প্রদান করুন (At least one finished sweet required)");
+    }
+
+    const idempotencyKey = `prod-batch-${Date.now()}`;
+
+    await prisma.$transaction(async (tx) => {
+      let directIngredientsCost = 0;
+
+      // Deduct ingredients only if DIRECT_CONSUMPTION mode
+      if (
+        data.sourceMode === "DIRECT_CONSUMPTION" &&
+        data.consumedIngredients &&
+        data.consumedIngredients.length > 0
+      ) {
+        for (const ing of data.consumedIngredients) {
+          if (Number(ing.quantity) > 0) {
+            const move = await applyMovement(tx, {
+              orgId,
+              productId: ing.productId,
+              type: "PRODUCTION",
+              qty: -Math.abs(Number(ing.quantity)),
+              note: `[Batch Ingredient] Consumed for direct sweet batch`,
+              refType: "production",
+              refId: idempotencyKey,
+            });
+            directIngredientsCost += Math.abs(Number(ing.quantity)) * Number(move.unitCost);
+          }
+        }
+      }
+
+      // Credit finished sweet items
+      const totalProducedQty = validProduced.reduce((acc, p) => acc + Number(p.quantity), 0);
+      const allocatedPerUnitCost =
+        directIngredientsCost > 0 && totalProducedQty > 0
+          ? directIngredientsCost / totalProducedQty
+          : 0;
+
+      for (const item of validProduced) {
+        // Fetch current product to obtain fallback cost if not specified
+        const sweetProd = await tx.product.findUnique({
+          where: { id: item.sweetProductId },
+          select: { avgCost: true, name: true },
+        });
+
+        const finalUnitCost =
+          item.unitCost && Number(item.unitCost) > 0
+            ? Number(item.unitCost)
+            : allocatedPerUnitCost > 0
+            ? allocatedPerUnitCost
+            : Number(sweetProd?.avgCost || 0);
+
+        const batchDesc =
+          data.sourceMode === "FROM_ALLOCATED"
+            ? `[Factory Production - From Allocated Materials / বরাদ্দ থেকে মিষ্টি গ্রহণ] ${
+                data.karigorName ? `কারিগর: ${data.karigorName} • ` : ""
+              }${data.note?.trim() || "কারখানা থেকে কাউন্টারের স্টকে যুক্ত"}`
+            : `[Direct Sweet Production Batch / তাৎক্ষণিক কাঁচামাল সহ উৎপাদন] ${
+                data.karigorName ? `কারিগর: ${data.karigorName} • ` : ""
+              }${data.note?.trim() || "কাউন্টারের স্টকে যুক্ত"}`;
+
+        await applyMovement(tx, {
+          orgId,
+          productId: item.sweetProductId,
+          type: "PRODUCTION",
+          qty: Math.abs(Number(item.quantity)),
+          unitCost: finalUnitCost,
+          note: batchDesc,
+          refType: "production",
+          refId: idempotencyKey,
+        });
+      }
+    }, TX_OPTIONS);
+
+    try {
+      revalidatePath("/inventory");
+      revalidatePath("/products");
+      revalidatePath("/dashboard");
+      revalidatePath("/reports");
+      revalidatePath("/pos");
+    } catch {}
+
+    return { success: true, count: validProduced.length };
+  }, "Failed to record multi-sweet production batch.");
 }

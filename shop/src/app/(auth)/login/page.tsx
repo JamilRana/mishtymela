@@ -2,10 +2,11 @@
 
 import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Store, Lock, Mail, AlertCircle, ArrowRight, ShieldCheck, UserCheck } from "lucide-react";
+import { Store, Lock, Mail, AlertCircle, ArrowRight } from "lucide-react";
 import { loginAction } from "@/actions/auth";
 import { useHydratedLanguage } from "@/stores/language";
 import { LanguageToggle } from "@/components/shared/LanguageToggle";
+import { BrambleThemeToggle, BrambleStage } from "@/components/shared/BramblePrimitives";
 import { useRoleStore } from "@/stores/role";
 
 function LoginForm() {
@@ -52,42 +53,39 @@ function LoginForm() {
     }
   };
 
-  const handleQuickLogin = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError(null);
-  };
-
   return (
-    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden">
+    <div className="w-full max-w-md bg-white/95 dark:bg-[#0c0e18]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--rule)] overflow-hidden z-10">
       {/* Header */}
-      <div className="p-8 pb-6 border-b border-slate-100 bg-gradient-to-b from-rose-50/50 to-white">
+      <div className="p-8 pb-6 border-b border-[var(--rule)] bg-[var(--well)]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-md shadow-rose-200">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#5b48f0] to-[#0a93c4] flex items-center justify-center text-white shadow-md">
               <Store className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-xl font-bold text-[var(--ink)] tracking-tight">
                 {t("shopTitle")}
               </h1>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-xs text-[var(--ink-3)] font-medium">
                 {t("tagline")}
               </p>
             </div>
           </div>
-          <LanguageToggle />
+          <div className="flex items-center gap-1.5">
+            <BrambleThemeToggle />
+            <LanguageToggle />
+          </div>
         </div>
 
         <div className="mt-4">
-          <h2 className="text-lg font-bold text-slate-800">{t("signInTitle")}</h2>
-          <p className="text-xs text-slate-500 mt-0.5">{t("signInSubtitle")}</p>
+          <h2 className="text-lg font-bold text-[var(--ink)]">{t("signInTitle")}</h2>
+          <p className="text-xs text-[var(--ink-3)] mt-0.5">{t("signInSubtitle")}</p>
         </div>
       </div>
 
       <div className="p-8 pt-6 space-y-6">
         {error && (
-          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+          <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
@@ -95,11 +93,11 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-slate-800 mb-1.5">
+            <label className="block text-sm font-bold text-[var(--ink)] mb-1.5">
               {t("emailAddress")}
             </label>
             <div className="relative">
-              <Mail className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-5 h-5 text-[var(--ink-3)] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
@@ -107,17 +105,17 @@ function LoginForm() {
                 placeholder="staff@sweetshop.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-3 border border-slate-300 rounded-lg text-base text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-medium"
+                className="w-full pl-10 pr-3.5 py-3 bg-[var(--well)] border border-[var(--rule)] rounded-xl text-base text-[var(--ink)] placeholder:text-[var(--ink-3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all font-medium"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-slate-800 mb-1.5">
+            <label className="block text-sm font-bold text-[var(--ink)] mb-1.5">
               {t("password")}
             </label>
             <div className="relative">
-              <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Lock className="w-5 h-5 text-[var(--ink-3)] absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 required
@@ -125,7 +123,7 @@ function LoginForm() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3.5 py-3 border border-slate-300 rounded-lg text-base text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-medium"
+                className="w-full pl-10 pr-3.5 py-3 bg-[var(--well)] border border-[var(--rule)] rounded-xl text-base text-[var(--ink)] placeholder:text-[var(--ink-3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all font-medium"
               />
             </div>
           </div>
@@ -133,7 +131,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-base font-bold shadow-md shadow-rose-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-[#5b48f0] to-[#0a93c4] hover:opacity-95 text-white rounded-xl text-base font-bold shadow-md transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             {isLoading ? (
               <span>{t("signingIn")}</span>
@@ -145,40 +143,6 @@ function LoginForm() {
             )}
           </button>
         </form>
-
-        {/* Demo Accounts Pill Selector for Quick Testing */}
-        <div className="pt-4 border-t border-slate-100">
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-slate-500" />
-            {t("demoAccounts")}
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("owner@example.com", "admin123")}
-              className="px-2.5 py-2 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-slate-800 hover:text-rose-700 transition-all text-center truncate"
-              title="owner@example.com / admin123"
-            >
-              Admin / Owner
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("manager@example.com", "manager123")}
-              className="px-2.5 py-2 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-slate-800 hover:text-rose-700 transition-all text-center truncate"
-              title="manager@example.com / manager123"
-            >
-              Manager
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin("cashier@example.com", "cashier123")}
-              className="px-2.5 py-2 bg-slate-50 hover:bg-rose-50 hover:border-rose-300 border border-slate-300 rounded-md text-xs sm:text-sm font-bold text-slate-800 hover:text-rose-700 transition-all text-center truncate"
-              title="cashier@example.com / cashier123"
-            >
-              Cashier
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -186,8 +150,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-rose-50/20 to-slate-200 flex items-center justify-center p-4">
-      <Suspense fallback={<div className="text-slate-400 text-sm">Loading...</div>}>
+    <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4 relative overflow-hidden">
+      <BrambleStage />
+      <Suspense fallback={<div className="text-[var(--ink-3)] text-sm">Loading...</div>}>
         <LoginForm />
       </Suspense>
     </div>

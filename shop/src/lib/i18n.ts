@@ -13,11 +13,25 @@ export interface TranslationDictionary {
   dashboard: string;
   pos: string;
   sales: string;
+  orders: string;
+  returns: string;
+  purchases: string;
+  dues: string;
   products: string;
   inventory: string;
   finance: string;
+  payroll: string;
   reports: string;
   settings: string;
+  contacts: string;
+  profile: string;
+  myProfile: string;
+  updateProfile: string;
+  changePassword: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+  resetPassword: string;
 
   // Roles & Access
   roleAdmin: string;
@@ -118,11 +132,25 @@ export const bnTranslations: TranslationDictionary = {
   dashboard: "ড্যাশবোর্ড",
   pos: "পিওএস কাউন্টার",
   sales: "বিক্রয় ও ইনভয়েস",
+  orders: "অর্ডার ও অগ্রিম বুকিং",
+  returns: "পণ্য ফেরত (Returns)",
+  purchases: "ক্রয় ও সাপ্লাইয়ার বিল",
+  dues: "বাকি খাতা (Due Ledger)",
   products: "মিষ্টি ও পণ্য তালিকা",
   inventory: "স্টক ও কাঁচামাল",
   finance: "হিসাব ও লেনদেন",
+  payroll: "কর্মচারী বেতন (Payroll)",
   reports: "লাভ-ক্ষতির রিপোর্ট",
   settings: "দোকান ও স্টাফ সেটিংস",
+  contacts: "কন্টাক্টস (কাস্টমার ও সাপ্লাইয়ার)",
+  profile: "প্রোফাইল",
+  myProfile: "আমার প্রোফাইল",
+  updateProfile: "প্রোফাইল আপডেট করুন",
+  changePassword: "পাসওয়ার্ড পরিবর্তন করুন",
+  currentPassword: "বর্তমান পাসওয়ার্ড",
+  newPassword: "নতুন পাসওয়ার্ড",
+  confirmPassword: "পাসওয়ার্ড নিশ্চিত করুন",
+  resetPassword: "পাসওয়ার্ড রিসেট করুন",
 
   // Roles & Access
   roleAdmin: "অ্যাডমিন / মালিক",
@@ -223,11 +251,25 @@ export const enTranslations: TranslationDictionary = {
   dashboard: "Dashboard",
   pos: "POS Terminal",
   sales: "Sales & Invoices",
+  orders: "Advance Orders",
+  returns: "Returns & Refunds",
+  purchases: "Purchases & Bills",
+  dues: "Due Ledger",
   products: "Products & Sweets",
   inventory: "Inventory & Stock",
   finance: "Finance & Accounts",
+  payroll: "Employee Payroll",
   reports: "Reports & P&L",
   settings: "Shop & Staff Settings",
+  contacts: "Contacts & Parties",
+  profile: "Profile",
+  myProfile: "My Profile",
+  updateProfile: "Update Profile",
+  changePassword: "Change Password",
+  currentPassword: "Current Password",
+  newPassword: "New Password",
+  confirmPassword: "Confirm Password",
+  resetPassword: "Reset Password",
 
   // Roles & Access
   roleAdmin: "Admin / Owner",

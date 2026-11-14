@@ -25,6 +25,8 @@ import {
   IssueKitchenModal,
   SweetProductionModal,
   ReportWastageModal,
+  BulkIssueFactoryModal,
+  MultiSweetProductionModal,
 } from "./InventoryModals";
 import { Pagination } from "@/components/shared/Pagination";
 import { useHydratedLanguage } from "@/stores/language";
@@ -82,6 +84,8 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   const [isIssueKitchenOpen, setIsIssueKitchenOpen] = useState(false);
   const [isSweetProductionOpen, setIsSweetProductionOpen] = useState(false);
   const [isReportWastageOpen, setIsReportWastageOpen] = useState(false);
+  const [isBulkIssueOpen, setIsBulkIssueOpen] = useState(false);
+  const [isMultiProductionOpen, setIsMultiProductionOpen] = useState(false);
   const [preselectedId, setPreselectedId] = useState<string | undefined>(initialReceiveId);
 
   // Pagination states
@@ -133,25 +137,27 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Sweet Production Batch */}
+          {/* 1. Receive Produced Sweets from Factory (Bulk / Batch) */}
           <button
-            onClick={() => setIsSweetProductionOpen(true)}
+            onClick={() => setIsMultiProductionOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded shadow-xs transition-colors"
+            title={language === "bn" ? "কারখানায় তৈরিকৃত মিষ্টি কাউন্টারে যোগ করুন" : "Receive produced sweets from kitchen into counter stock"}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{language === "bn" ? "মিষ্টি তৈরি এন্ট্রি" : "Produce Sweets"}</span>
+            <span>{language === "bn" ? "+ মিষ্টি উৎপাদন গ্রহণ" : "+ Receive Sweets"}</span>
           </button>
 
-          {/* Kitchen Requisition */}
+          {/* 2. Bulk Issue Raw Materials to Factory */}
           <button
-            onClick={() => setIsIssueKitchenOpen(true)}
+            onClick={() => setIsBulkIssueOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded shadow-xs transition-colors"
+            title={language === "bn" ? "একত্রে চিনি, তেল, দুধ ইত্যাদি কারখানায় বরাদ্দ" : "Bulk allocate raw materials to kitchen"}
           >
             <ChefHat className="w-3.5 h-3.5" />
-            <span>{language === "bn" ? "কারখানায় ইস্যু" : "Issue to Kitchen"}</span>
+            <span>{language === "bn" ? "কারখানায় বরাদ্দ" : "Allocate to Factory"}</span>
           </button>
 
-          {/* Receive Stock */}
+          {/* 3. Receive Stock */}
           <button
             onClick={() => {
               setPreselectedId(undefined);
@@ -163,7 +169,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
             <span>{language === "bn" ? "মালামাল রিসিভ" : "Receive Stock"}</span>
           </button>
 
-          {/* Spoilage / Wastage */}
+          {/* 4. Spoilage / Wastage */}
           <button
             onClick={() => setIsReportWastageOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold rounded transition-colors"
@@ -173,7 +179,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
             <span>{language === "bn" ? "অপচয় / নষ্ট" : "Wastage"}</span>
           </button>
 
-          {/* Adjust Stock */}
+          {/* 5. Adjust Stock */}
           <button
             onClick={() => setIsAdjustOpen(true)}
             className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded transition-colors"
@@ -416,11 +422,22 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
 
       {/* Modals */}
       <ReceiveStockModal
+        key={preselectedId || "receive-modal"}
         products={products}
         accounts={accounts}
         open={isReceiveOpen}
         onOpenChange={setIsReceiveOpen}
         preselectedProductId={preselectedId}
+      />
+      <BulkIssueFactoryModal
+        products={products}
+        open={isBulkIssueOpen}
+        onOpenChange={setIsBulkIssueOpen}
+      />
+      <MultiSweetProductionModal
+        products={products}
+        open={isMultiProductionOpen}
+        onOpenChange={setIsMultiProductionOpen}
       />
       <AdjustStockModal
         products={products}
@@ -431,6 +448,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
         products={products}
         open={isIssueKitchenOpen}
         onOpenChange={setIsIssueKitchenOpen}
+        preselectedProductId={preselectedId}
       />
       <SweetProductionModal
         products={products}

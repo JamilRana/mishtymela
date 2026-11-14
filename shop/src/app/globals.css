@@ -3,26 +3,110 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --border: #e2e8f0;
-  --input: #cbd5e1; /* inputs keep a firmer edge than cards */
-  --ring: #2563eb;
-  --foreground: #090d16;
-  --muted: #f1f5f9;
-  --muted-foreground: #334155;
-  --primary: #1d4ed8;
-  --primary-hover: #1e40af;
+  --background: #e9ebf3;
+  --surface: rgb(255 255 255 / 0.65);
+  --border: rgb(24 28 60 / 0.08);
+  --input: rgb(24 28 60 / 0.12);
+  --ring: #5b48f0;
+  --foreground: #10121c;
+  --muted: rgb(255 255 255 / 0.5);
+  --muted-foreground: #5d6378;
+  --primary: #5b48f0;
+  --primary-hover: #4836dc;
   --primary-foreground: #ffffff;
-  --success: #15803d;
-  --success-light: #f0fdf4;
-  --success-foreground: #14532d;
-  --warning: #b45309;
-  --warning-light: #fffbeb;
-  --warning-foreground: #78350f;
-  --danger: #b91c1c;
-  --danger-light: #fef2f2;
-  --danger-foreground: #7f1d1d;
+  --success: #12895a;
+  --success-light: rgb(18 137 90 / 0.12);
+  --success-foreground: #12895a;
+  --warning: #b46400;
+  --warning-light: rgb(255 174 61 / 0.2);
+  --warning-foreground: #b46400;
+  --danger: #d92d48;
+  --danger-light: rgb(217 45 72 / 0.1);
+  --danger-foreground: #d92d48;
+
+  /* Bramble design tokens */
+  --bg: #e9ebf3;
+  --sheet: rgb(255 255 255 / 0.65);
+  --sheet-solid: rgb(248 249 252 / 0.95);
+  --well: rgb(255 255 255 / 0.6);
+  --hover: rgb(24 28 60 / 0.05);
+  --ink: #10121c;
+  --ink-2: #3b4053;
+  --ink-3: #5d6378;
+  --rule: rgb(24 28 60 / 0.08);
+  --rule-strong: rgb(24 28 60 / 0.16);
+  --accent: #5b48f0;
+  --accent-2: #0a93c4;
+  --accent-ink: #ffffff;
+  --accent-soft: rgb(91 72 240 / 0.1);
+  --green: #12895a;
+  --green-soft: rgb(18 137 90 / 0.12);
+  --amber: #b46400;
+  --amber-mark: #ffae3d;
+  --amber-soft: rgb(255 174 61 / 0.2);
+  --red: #d92d48;
+  --red-soft: rgb(217 45 72 / 0.1);
+  --rim-top: rgb(255 255 255 / 0.95);
+  --rim-bottom: rgb(255 255 255 / 0.4);
+  --rim-light: rgb(91 72 240 / 0.45);
+  --blur: blur(28px) saturate(170%);
+  --shadow: 0 1px 1px rgb(20 24 60 / 0.04), 0 18px 40px -24px rgb(20 24 60 / 0.35);
+  --shadow-lift: 0 2px 2px rgb(20 24 60 / 0.05), 0 30px 70px -26px rgb(20 24 60 / 0.5);
+  --r-sm: 12px;
+  --r: 22px;
+  --r-lg: 28px;
+}
+
+[data-theme="dark"],
+.dark {
+  --background: #05060b;
+  --surface: rgb(18 20 32 / 0.55);
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.12);
+  --ring: #9a8cff;
+  --foreground: #eef0f7;
+  --muted: rgb(255 255 255 / 0.06);
+  --muted-foreground: #8a91a6;
+  --primary: #9a8cff;
+  --primary-hover: #8371fc;
+  --primary-foreground: #0b0a1d;
+  --success: #43dc9e;
+  --success-light: rgb(67 220 158 / 0.13);
+  --success-foreground: #43dc9e;
+  --warning: #ffbe5c;
+  --warning-light: rgb(255 174 61 / 0.15);
+  --warning-foreground: #ffbe5c;
+  --danger: #ff7389;
+  --danger-light: rgb(255 115 137 / 0.14);
+  --danger-foreground: #ff7389;
+
+  /* Bramble dark tokens */
+  --bg: #05060b;
+  --sheet: rgb(18 20 32 / 0.55);
+  --sheet-solid: rgb(16 18 30 / 0.94);
+  --well: rgb(255 255 255 / 0.045);
+  --hover: rgb(255 255 255 / 0.05);
+  --ink: #eef0f7;
+  --ink-2: #bcc2d3;
+  --ink-3: #8a91a6;
+  --rule: rgb(255 255 255 / 0.075);
+  --rule-strong: rgb(255 255 255 / 0.15);
+  --accent: #9a8cff;
+  --accent-2: #3fd2ff;
+  --accent-ink: #0b0a1d;
+  --accent-soft: rgb(154 140 255 / 0.15);
+  --green: #43dc9e;
+  --green-soft: rgb(67 220 158 / 0.13);
+  --amber: #ffbe5c;
+  --amber-mark: #ffae3d;
+  --amber-soft: rgb(255 174 61 / 0.15);
+  --red: #ff7389;
+  --red-soft: rgb(255 115 137 / 0.14);
+  --rim-top: rgb(255 255 255 / 0.14);
+  --rim-bottom: rgb(255 255 255 / 0.035);
+  --rim-light: rgb(190 180 255 / 0.6);
+  --shadow: 0 1px 1px rgb(0 0 0 / 0.35), 0 24px 54px -26px rgb(0 0 0 / 0.9);
+  --shadow-lift: 0 2px 2px rgb(0 0 0 / 0.4), 0 36px 80px -24px rgb(0 0 0 / 0.95);
 }
 
 body {
@@ -199,5 +283,444 @@ body {
 
 .animate-aurora-blink {
   animation: aurora-blink 2s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   BRAMBLE DESIGN SYSTEM UTILITIES
+   ========================================================================== */
+
+/* Glass Surface with Inset Rim Highlight */
+.glass {
+  background: var(--sheet);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--rule);
+  box-shadow: inset 0 1px 0 var(--rim-top), var(--shadow);
+}
+
+.glass-solid {
+  background: var(--sheet-solid);
+  border: 1px solid var(--rule);
+  box-shadow: inset 0 1px 0 var(--rim-top), var(--shadow);
+}
+
+.bramble-card {
+  border-radius: var(--r);
+  background: var(--sheet);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--rule);
+  box-shadow: inset 0 1px 0 var(--rim-top), var(--shadow);
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.bramble-card:hover {
+  box-shadow: inset 0 1px 0 var(--rim-top), var(--shadow-lift);
+}
+
+/* Ambient Stage & Directional Light Shafts */
+.stage {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.stage .ray {
+  position: absolute;
+  filter: blur(48px);
+  opacity: 0.6;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: normal;
+}
+
+.stage .ray.r1 {
+  top: -120px;
+  right: -80px;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(63, 210, 255, 0.35) 0%, rgba(91, 72, 240, 0.15) 50%, transparent 70%);
+}
+
+.stage .ray.r2 {
+  top: -100px;
+  left: 15%;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(139, 123, 255, 0.3) 0%, rgba(91, 72, 240, 0.1) 60%, transparent 75%);
+}
+
+.stage .ray.r3 {
+  bottom: 5%;
+  right: 20%;
+  width: 440px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(255, 174, 61, 0.22) 0%, transparent 65%);
+}
+
+.stage .floor {
+  position: absolute;
+  bottom: -150px;
+  left: 20%;
+  right: 20%;
+  height: 320px;
+  background: radial-gradient(ellipse at center, rgba(139, 123, 255, 0.2) 0%, transparent 70%);
+  filter: blur(55px);
+}
+
+/* Bramble Product Swatch with Radiant Hue */
+.swatch {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 25%, hsl(var(--h, 245) 90% 70%), hsl(var(--h, 245) 80% 48%) 65%, hsl(var(--h, 245) 80% 32%));
+  color: #fff;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.5), 0 8px 20px -8px hsl(var(--h, 245) 80% 50% / 0.5);
+  border-radius: 20px;
+  transition: box-shadow 0.2s, transform 0.2s;
+  flex-shrink: 0;
+}
+
+.bramble-card:hover .swatch {
+  box-shadow: inset 0 1px #ffffff73, 0 12px 28px -8px hsl(var(--h, 245) 80% 55%);
+  transform: translateY(-1px);
+}
+
+/* Bramble Stock Level Tube Indicator */
+.tube {
+  position: relative;
+  width: 22px;
+  height: 84px;
+  border-radius: 11px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.tube-liquid {
+  width: 100%;
+  height: var(--f, 60%);
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  transition: height 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  position: relative;
+}
+
+.tube.low .tube-liquid {
+  background: linear-gradient(180deg, #ffc56b, #ff8a3d);
+  box-shadow: 0 0 14px rgba(255, 150, 60, 0.6);
+}
+
+.tube.out {
+  box-shadow: inset 0 0 0 1.5px var(--red);
+}
+
+.tube-wave {
+  position: absolute;
+  left: -50%;
+  top: -4px;
+  width: 200%;
+  height: 8px;
+  background: radial-gradient(6px 5px at 6px 0, transparent 98%, rgba(255, 255, 255, 0.45)) 0 0 / 12px 8px repeat-x;
+  animation: bramble-wave 2.4s linear infinite;
+}
+
+@keyframes bramble-wave {
+  to {
+    transform: translateX(12px);
+  }
+}
+
+.tube-mark {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: var(--r, 25%);
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.55;
+  border-radius: 1px;
+}
+
+.tube.out .tube-mark {
+  background: var(--red);
+  opacity: 1;
+}
+
+/* Unified 4-Column Stat Strip */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--sheet);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+  box-shadow: inset 0 1px 0 var(--rim-top), var(--shadow);
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .stat-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 540px) {
+  .stat-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-strip > div {
+  padding: 16px 20px;
+  position: relative;
+}
+
+.stat-strip > div:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  right: 0;
+  width: 1px;
+  background: var(--rule);
+}
+
+/* Bramble Filter Chips */
+.bramble-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 17px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: var(--well);
+  border: 1px solid var(--rule);
+  color: var(--ink-2);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bramble-chip:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.bramble-chip[aria-pressed="true"],
+.bramble-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 1px 0 var(--rim-top);
+  font-weight: 600;
+}
+
+.bramble-chip b {
+  font-size: 0.75rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--well);
+  color: var(--ink-2);
+}
+
+.bramble-chip[aria-pressed="true"] b,
+.bramble-chip.active b {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* Bramble Tag Badge */
+.bramble-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.bramble-tag.good {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.bramble-tag.warn {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.bramble-tag.bad {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.bramble-tag.info {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.bramble-tag.plain {
+  background: var(--well);
+  color: var(--ink-3);
+  border: 1px solid var(--rule);
+}
+
+/* ==========================================================================
+   Comprehensive Dark & Light Mode Universal Bridge
+   Ensures seamless theme consistency across all legacy tables, cards & forms
+   ========================================================================== */
+
+/* Dark Mode Overrides (excluding thermal receipt print containers) */
+.dark body:not(.print-mode),
+[data-theme="dark"] body:not(.print-mode) {
+  background-color: var(--bg);
+  color: var(--ink);
+}
+
+/* Card & container surfaces */
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-white,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-white {
+  background-color: var(--sheet-solid) !important;
+  color: var(--ink);
+}
+
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-slate-50,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-slate-100,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-zinc-50,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-zinc-100,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-slate-50,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-slate-100,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-zinc-50,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable):not([data-theme-ignore]).bg-zinc-100 {
+  background-color: var(--well) !important;
+  color: var(--ink);
+}
+
+/* Borders and dividers */
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-slate-100,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-slate-200,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-slate-300,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-zinc-200,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-zinc-300,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-slate-100,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-slate-200,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-slate-300,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-zinc-200,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).border-zinc-300 {
+  border-color: var(--rule) !important;
+}
+
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--rule) !important;
+}
+
+/* Typography mappings */
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-900,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-800,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-900,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-800,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-900,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-800,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-900,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-800 {
+  color: var(--ink) !important;
+}
+
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-700,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-600,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-700,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-600,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-700,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-600,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-700,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-600 {
+  color: var(--ink-2) !important;
+}
+
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-500,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-400,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-500,
+.dark :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-400,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-500,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-slate-400,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-500,
+[data-theme="dark"] :not(#thermal-receipt):not(#invoice-printable):not(#statement-printable).text-zinc-400 {
+  color: var(--ink-3) !important;
+}
+
+/* Primary buttons with hardcoded bg-slate-900 */
+.dark button.bg-slate-900,
+.dark a.bg-slate-900,
+[data-theme="dark"] button.bg-slate-900,
+[data-theme="dark"] a.bg-slate-900 {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.dark button.bg-slate-900:hover,
+.dark a.bg-slate-900:hover,
+[data-theme="dark"] button.bg-slate-900:hover,
+[data-theme="dark"] a.bg-slate-900:hover {
+  background-color: var(--primary-hover) !important;
+}
+
+/* Dialog and Modal containers */
+.dark [role="dialog"],
+[data-theme="dark"] [role="dialog"] {
+  color: var(--ink);
+}
+
+/* Table styling in dark mode */
+.dark table thead th,
+.dark table thead tr,
+[data-theme="dark"] table thead th,
+[data-theme="dark"] table thead tr {
+  background-color: var(--well) !important;
+  color: var(--ink) !important;
+  border-color: var(--rule) !important;
+}
+
+.dark table tbody tr:hover,
+[data-theme="dark"] table tbody tr:hover {
+  background-color: var(--hover) !important;
+}
+
+.dark table tbody td,
+[data-theme="dark"] table tbody td {
+  border-color: var(--rule) !important;
+}
+
+/* Inputs, Selects, and Textareas in dark mode */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]):not(#thermal-receipt *),
+.dark select:not(#thermal-receipt *),
+.dark textarea:not(#thermal-receipt *),
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]):not(#thermal-receipt *),
+[data-theme="dark"] select:not(#thermal-receipt *),
+[data-theme="dark"] textarea:not(#thermal-receipt *) {
+  background-color: var(--well) !important;
+  border-color: var(--rule-strong) !important;
+  color: var(--ink) !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  background-color: var(--sheet-solid) !important;
+  border-color: var(--accent) !important;
 }
 

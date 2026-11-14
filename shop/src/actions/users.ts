@@ -236,3 +236,46 @@ export async function deleteUserAction(id: string) {
     return {};
   }, "Failed to delete staff member.");
 }
+
+export async function resetUserPasswordAction(data: {
+  userId: string;
+  newPassword: string;
+}) {
+  return handleAction("resetUserPasswordAction", async () => {
+    const session = await requireRole(["ADMIN", "OWNER"]);
+    const orgId = session.organizationId;
+
+    const newPass = data.newPassword?.trim() ?? "";
+    if (newPass.length < 6) {
+      throw new Error("Password must be at least 6 characters long.");
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { id: data.userId, organizationId: orgId },
+    });
+
+    if (!user) {
+      throw new Error("Staff member not found.");
+    }
+
+    const hashedPassword = await hashPassword(newPass);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: hashedPassword,
+        failedLogins: 0,
+        lockedUntil: null,
+      },
+    });
+
+    try {
+      revalidatePath("/settings");
+    } catch {}
+
+    return {
+      success: true,
+      message: `Password for ${user.name} has been reset successfully.`,
+    };
+  }, "Failed to reset password.");
+}

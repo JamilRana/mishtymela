@@ -8,6 +8,8 @@ import { useHydratedRole } from "@/stores/role";
 import { useHydratedLanguage } from "@/stores/language";
 import { useHydratedOrganization } from "@/stores/organization";
 import { LanguageToggle } from "./LanguageToggle";
+import { SmartAlertsPopover } from "./SmartAlertsPopover";
+import { BrambleThemeToggle } from "./BramblePrimitives";
 import { getCurrentSessionAction, logoutAction } from "@/actions/auth";
 import { getOrganizationAction } from "@/actions/organization";
 
@@ -45,14 +47,14 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-slate-100 overflow-hidden select-none">
+    <div className="h-[100dvh] flex flex-col bg-[var(--bg)] text-[var(--ink)] overflow-hidden select-none">
       {/* POS Top Bar */}
-      <header className="h-12 sm:h-13 bg-slate-900 text-white px-3 sm:px-4 flex items-center justify-between shrink-0 shadow-xs z-30">
+      <header className="h-12 sm:h-13 bg-white/95 dark:bg-[#0c0e18]/95 backdrop-blur-xl border-b border-[var(--rule)] text-[var(--ink)] px-3 sm:px-4 flex items-center justify-between shrink-0 shadow-xs z-30">
         <div className="flex items-center gap-2 sm:gap-4">
           {activeRole !== "CASHIER" && (
             <Link
               href="/dashboard"
-              className="flex items-center gap-1 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2 py-1.5 rounded-md transition-colors"
+              className="flex items-center gap-1 text-xs text-[var(--ink-2)] hover:text-[var(--ink)] bg-[var(--well)] hover:bg-[var(--hover)] border border-[var(--rule)] px-2.5 py-1.5 rounded-xl transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span className="hidden xs:inline" suppressHydrationWarning>
@@ -60,16 +62,16 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
               </span>
             </Link>
           )}
-          {activeRole !== "CASHIER" && <div className="h-4 w-px bg-slate-700 hidden xs:block" />}
+          {activeRole !== "CASHIER" && <div className="h-4 w-px bg-[var(--rule)] hidden xs:block" />}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <span
-              className="font-bold text-sm sm:text-base text-white tracking-tight truncate max-w-[150px] sm:max-w-none"
+              className="font-bold text-sm sm:text-base text-[var(--ink)] tracking-tight truncate max-w-[150px] sm:max-w-none"
               suppressHydrationWarning
             >
               {shopName || t("shopTitle")}
             </span>
             <span
-              className="text-xs bg-rose-600/40 text-rose-200 border border-rose-500/40 px-2 py-0.5 rounded font-bold hidden sm:inline"
+              className="text-xs bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded font-bold hidden sm:inline"
               suppressHydrationWarning
             >
               {t("cashierCounter")}
@@ -77,25 +79,31 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 sm:gap-4 text-xs sm:text-sm">
-          <LanguageToggle className="bg-slate-800 border-slate-700" />
+        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+          <BrambleThemeToggle />
+          <SmartAlertsPopover />
+          <LanguageToggle />
 
-          <div className="hidden sm:flex items-center gap-1.5 text-slate-300">
-            <Clock className="w-4 h-4 text-slate-400" />
+          <div className="hidden sm:flex items-center gap-1.5 text-[var(--ink-3)]">
+            <Clock className="w-4 h-4 text-[var(--ink-3)]" />
             <span className="tabular-nums font-mono text-xs sm:text-sm font-semibold" suppressHydrationWarning>
               {time ? formatDhakaDate(time, true) : "১২:০০:০০ AM"}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-emerald-400">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex items-center gap-1.5 text-emerald-500">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs sm:text-sm font-bold" suppressHydrationWarning>
               {t("online")}
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-md text-slate-200">
-            <User className="w-3.5 h-3.5 text-slate-400" />
+          <Link
+            href="/profile"
+            className="flex items-center gap-1.5 bg-[var(--well)] hover:bg-[var(--hover)] border border-[var(--rule)] px-3 py-1.5 rounded-xl text-[var(--ink)] transition-colors"
+            title={t("myProfile")}
+          >
+            <User className="w-3.5 h-3.5 text-[var(--ink-3)]" />
             <span className="font-bold text-xs sm:text-sm" suppressHydrationWarning>
               {activeUserName.split(" ")[0]} (
               {activeRole === "ADMIN"
@@ -105,12 +113,12 @@ export const PosShell: React.FC<{ children: React.ReactNode }> = ({
                 : t("roleCashier")}
               )
             </span>
-          </div>
+          </Link>
 
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-md font-semibold transition-colors"
+            className="flex items-center gap-1.5 text-[var(--ink-3)] hover:text-rose-500 bg-[var(--well)] hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-[var(--rule)] px-3 py-1.5 rounded-xl font-semibold transition-colors"
             title={t("signOut")}
           >
             <LogOut className="w-4 h-4" />

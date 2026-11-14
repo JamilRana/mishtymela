@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma, withDbRetry } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 
 export interface DateRangeReportFilter {
@@ -465,4 +465,241 @@ export async function getDateRangeReportAction(filter: DateRangeReportFilter = {
       occurredAt: e.occurredAt.toISOString(),
     })),
   };
+}
+
+export async function getStaffPerformanceReportAction(options?: {
+  startDate?: string;
+  endDate?: string;
+}) {
+  return withDbRetry(async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    const where: any = {
+      organizationId: orgId,
+      status: "COMPLETED",
+    };
+
+    if (options?.startDate || options?.endDate) {
+      where.createdAt = {};
+      if (options.startDate) where.createdAt.gte = new Date(options.startDate);
+      if (options.endDate) where.createdAt.lte = new Date(options.endDate + "T23:59:59.999Z");
+    }
+
+    const [sales, users] = await Promise.all([
+      prisma.sale.findMany({
+        where,
+        select: {
+          id: true,
+          total: true,
+          paid: true,
+          createdById: true,
+          createdAt: true,
+        },
+      }),
+      prisma.user.findMany({
+        where: { organizationId: orgId },
+        select: { id: true, name: true, role: true, email: true },
+      }),
+    ]);
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const staffStats = new Map<
+      string,
+      {
+        userId: string;
+        name: string;
+        role: string;
+        totalSales: number;
+        invoiceCount: number;
+        avgInvoiceValue: number;
+      }
+    >();
+
+    for (const s of sales) {
+      const uId = s.createdById || "unknown";
+      const u = userMap.get(uId);
+      const name = u?.name || "Counter / System";
+      const role = u?.role || "STAFF";
+
+      const cur = staffStats.get(uId) || {
+        userId: uId,
+        name,
+        role,
+        totalSales: 0,
+        invoiceCount: 0,
+        avgInvoiceValue: 0,
+      };
+
+      cur.totalSales += Number(s.total);
+      cur.invoiceCount++;
+      staffStats.set(uId, cur);
+    }
+
+    const staffList = Array.from(staffStats.values())
+      .map((st) => ({
+        ...st,
+        avgInvoiceValue: st.invoiceCount > 0 ? Number((st.totalSales / st.invoiceCount).toFixed(2)) : 0,
+      }))
+      .sort((a, b) => b.totalSales - a.totalSales);
+
+    return {
+      staffList,
+      totalRevenue: staffList.reduce((acc, cur) => acc + cur.totalSales, 0),
+      totalInvoices: staffList.reduce((acc, cur) => acc + cur.invoiceCount, 0),
+    };
+  });
+}
+
+export async function getStockMovementLedgerAction(options?: {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  productId?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return withDbRetry(async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    const page = Math.max(1, options?.page ?? 1);
+    const pageSize = Math.max(1, Math.min(100, options?.pageSize ?? 25));
+    const skip = (page - 1) * pageSize;
+
+    const where: any = { organizationId: orgId };
+
+    if (options?.type && options.type !== "ALL") {
+      where.type = options.type;
+    }
+
+    if (options?.productId) {
+      where.productId = options.productId;
+    }
+
+    if (options?.startDate || options?.endDate) {
+      where.createdAt = {};
+      if (options.startDate) where.createdAt.gte = new Date(options.startDate);
+      if (options.endDate) where.createdAt.lte = new Date(options.endDate + "T23:59:59.999Z");
+    }
+
+    const [totalCount, movements] = await Promise.all([
+      prisma.stockMovement.count({ where }),
+      prisma.stockMovement.findMany({
+        where,
+        include: {
+          product: {
+            select: { id: true, name: true, sku: true, unit: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      movements: movements.map((m) => ({
+        id: m.id,
+        productId: m.productId,
+        productName: m.product?.name ?? "Unknown Product",
+        sku: m.product?.sku ?? "",
+        unit: m.product?.unit ?? "pcs",
+        type: m.type,
+        quantityDelta: Number(m.quantityDelta),
+        unitCost: Number(m.unitCost),
+        balanceAfter: Number(m.balanceAfter),
+        note: m.note,
+        createdAt: m.createdAt.toISOString(),
+      })),
+      totalCount,
+      page,
+      pageSize,
+      totalPages: Math.ceil(totalCount / pageSize),
+    };
+  });
+}
+
+export async function getSupplierPurchaseRegisterAction(options?: {
+  startDate?: string;
+  endDate?: string;
+}) {
+  return withDbRetry(async () => {
+    const session = await requireRole(["ADMIN", "OWNER", "MANAGER"]);
+    const orgId = session.organizationId;
+
+    const where: any = { organizationId: orgId };
+    if (options?.startDate || options?.endDate) {
+      where.createdAt = {};
+      if (options.startDate) where.createdAt.gte = new Date(options.startDate);
+      if (options.endDate) where.createdAt.lte = new Date(options.endDate + "T23:59:59.999Z");
+    }
+
+    const purchases = await prisma.purchase.findMany({
+      where,
+      include: {
+        supplier: {
+          select: { id: true, name: true, phone: true },
+        },
+        items: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const supplierMap = new Map<
+      string,
+      {
+        supplierId: string;
+        supplierName: string;
+        supplierPhone: string;
+        totalPurchases: number;
+        paidAmount: number;
+        dueAmount: number;
+        billsCount: number;
+      }
+    >();
+
+    let totalVolume = 0;
+    let totalPaid = 0;
+    let totalDue = 0;
+
+    for (const p of purchases) {
+      const sId = p.contactId;
+      const sName = p.supplier.name;
+      const sPhone = p.supplier.phone;
+
+      const total = Number(p.total);
+      const paid = Number(p.paid);
+      const due = Number(p.due);
+
+      totalVolume += total;
+      totalPaid += paid;
+      totalDue += due;
+
+      const cur = supplierMap.get(sId) || {
+        supplierId: sId,
+        supplierName: sName,
+        supplierPhone: sPhone,
+        totalPurchases: 0,
+        paidAmount: 0,
+        dueAmount: 0,
+        billsCount: 0,
+      };
+
+      cur.totalPurchases += total;
+      cur.paidAmount += paid;
+      cur.dueAmount += due;
+      cur.billsCount++;
+      supplierMap.set(sId, cur);
+    }
+
+    return {
+      suppliers: Array.from(supplierMap.values()).sort((a, b) => b.totalPurchases - a.totalPurchases),
+      totalVolume,
+      totalPaid,
+      totalDue,
+      billsCount: purchases.length,
+    };
+  });
 }

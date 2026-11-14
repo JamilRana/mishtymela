@@ -2,12 +2,18 @@ import React from "react";
 import { prisma } from "@/lib/prisma";
 import { getCategoriesWithCounts } from "@/actions/products";
 import { getTxCategories } from "@/actions/finance";
+import { getBrands } from "@/actions/brands";
+import { getUnits } from "@/actions/units";
+import { getPrinterSettings } from "@/actions/printers";
 import { requireAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { CategorySettingsSection } from "@/components/settings/CategorySettingsSection";
 import { TxCategorySettingsSection } from "@/components/settings/TxCategorySettingsSection";
 import { ShopProfileSection } from "@/components/settings/ShopProfileSection";
 import { UserManagerSection } from "@/components/settings/UserManagerSection";
+import { BrandSettingsSection } from "@/components/settings/BrandSettingsSection";
+import { UnitSettingsSection } from "@/components/settings/UnitSettingsSection";
+import { PrinterSettingsSection } from "@/components/settings/PrinterSettingsSection";
 import { Wallet, Check } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +22,7 @@ export default async function SettingsPage() {
   const session = await requireAuth();
   const orgId = session.organizationId;
 
-  const [org, productCategories, txCategories] = await Promise.all([
+  const [org, productCategories, txCategories, brands, units, printers] = await Promise.all([
     prisma.organization.findUniqueOrThrow({
       where: { id: orgId },
       include: {
@@ -28,6 +34,9 @@ export default async function SettingsPage() {
     }),
     getCategoriesWithCounts(),
     getTxCategories(),
+    getBrands(),
+    getUnits(),
+    getPrinterSettings(),
   ]);
 
   const organizationData = {
@@ -66,6 +75,11 @@ export default async function SettingsPage() {
         {/* Role-Based User Management */}
         <UserManagerSection users={staffUsers} />
 
+        {/* Hardware & Thermal ESC/POS Printers */}
+        <div className="bg-card border rounded-md p-5 shadow-sm">
+          <PrinterSettingsSection printers={printers} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Dynamic Product Categories Management */}
           <CategorySettingsSection categories={productCategories} />
@@ -95,6 +109,12 @@ export default async function SettingsPage() {
               ))}
             </div>
           </div>
+
+          {/* Brands Management */}
+          <BrandSettingsSection brands={brands} />
+
+          {/* Units of Measurement Management */}
+          <UnitSettingsSection units={units} />
 
           {/* Dynamic Sweet Shop Income & Expense Categories */}
           <div className="lg:col-span-2">

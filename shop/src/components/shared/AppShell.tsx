@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -20,45 +19,96 @@ import {
   Store,
   LogOut,
   User as UserIcon,
-  Check,
+  Users,
+  Truck,
+  BookOpen,
+  CalendarCheck,
+  RotateCcw,
+  Banknote,
+  Search,
+  Plus,
   Lock,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHydratedRole } from "@/stores/role";
 import { useHydratedLanguage } from "@/stores/language";
 import { useHydratedOrganization } from "@/stores/organization";
 import { LanguageToggle } from "./LanguageToggle";
-import { Role } from "@prisma/client";
+import { SmartAlertsPopover } from "./SmartAlertsPopover";
 import { getCurrentSessionAction, logoutAction } from "@/actions/auth";
 import { getOrganizationAction } from "@/actions/organization";
+import { BrambleStage, BrambleThemeToggle } from "./BramblePrimitives";
 
-interface NavItem {
-  key: "dashboard" | "pos" | "sales" | "products" | "inventory" | "finance" | "reports" | "settings";
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  isPos?: boolean;
+interface NavGroup {
+  groupNameBn: string;
+  groupNameEn: string;
+  items: Array<{
+    key: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    labelBn: string;
+    labelEn: string;
+    badgeCount?: number;
+    badgeType?: "info" | "warn";
+  }>;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { key: "pos", href: "/pos", icon: Store, isPos: true },
-  { key: "sales", href: "/sales", icon: Receipt },
-  { key: "products", href: "/products", icon: Package },
-  { key: "inventory", href: "/inventory", icon: Boxes },
-  { key: "finance", href: "/finance", icon: Wallet },
-  { key: "reports", href: "/reports", icon: BarChart3 },
-  { key: "settings", href: "/settings", icon: Settings },
+const NAV_GROUPS: NavGroup[] = [
+  {
+    groupNameBn: "বিক্রয়",
+    groupNameEn: "SELL",
+    items: [
+      { key: "dashboard", href: "/dashboard", icon: LayoutDashboard, labelBn: "ওভারভিউ", labelEn: "Overview" },
+      { key: "pos", href: "/pos", icon: Store, labelBn: "পিওএস কাউন্টার", labelEn: "POS Terminal" },
+      { key: "orders", href: "/orders", icon: CalendarCheck, labelBn: "অর্ডারসমূহ", labelEn: "Orders", badgeCount: 12, badgeType: "info" },
+      { key: "sales", href: "/sales", icon: Receipt, labelBn: "বিক্রয় ও রসিদ", labelEn: "Sales & Invoices" },
+      { key: "products", href: "/products", icon: Package, labelBn: "মিষ্টি ও পণ্য", labelEn: "Products" },
+      { key: "inventory", href: "/inventory", icon: Boxes, labelBn: "মজুদ স্টক", labelEn: "Inventory", badgeCount: 3, badgeType: "warn" },
+      { key: "returns", href: "/returns", icon: RotateCcw, labelBn: "রিটার্ন", labelEn: "Returns" },
+    ],
+  },
+  {
+    groupNameBn: "আর্থিক",
+    groupNameEn: "MONEY",
+    items: [
+      { key: "finance", href: "/finance", icon: Wallet, labelBn: "হিসাব ও ক্যাশ", labelEn: "Finances & Cash" },
+      { key: "purchases", href: "/purchases", icon: Truck, labelBn: "মালামাল ক্রয়", labelEn: "Purchases" },
+      { key: "dues", href: "/dues", icon: BookOpen, labelBn: "বাকি খাতা", labelEn: "Due Ledger" },
+      { key: "payroll", href: "/payroll", icon: Banknote, labelBn: "স্টাফ বেতন", labelEn: "Payroll" },
+    ],
+  },
+  {
+    groupNameBn: "সিস্টেম",
+    groupNameEn: "SYSTEM",
+    items: [
+      { key: "reports", href: "/reports", icon: BarChart3, labelBn: "রিপোর্ট ও বিশ্লেষণ", labelEn: "Analytics" },
+      { key: "contacts", href: "/contacts", icon: Users, labelBn: "কাস্টমার ও সরবরাহকারী", labelEn: "Contacts" },
+      { key: "settings", href: "/settings", icon: Settings, labelBn: "দোকান সেটিংস", labelEn: "Settings" },
+    ],
+  },
 ];
 
-export const AppShell: React.FC<{ children: React.ReactNode }> = ({
+interface AppShellProps {
+  children: React.ReactNode;
+  initialSession?: {
+    userId: string;
+    name: string;
+    role: any;
+    organizationId?: string;
+  };
+  initialShopInfo?: any;
+}
+
+export const AppShell: React.FC<AppShellProps> = ({
   children,
+  initialSession,
+  initialShopInfo,
 }) => {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleMenuOpen, setRoleMenuOpen] = useState(false);
 
-  // Sync collapsed state with localStorage on client mount
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem("sidebar_collapsed");
@@ -83,76 +133,87 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const { activeRole, activeUserName, setActiveRole, canAccess } = useHydratedRole();
-  const { t } = useHydratedLanguage();
+  const { language, t } = useHydratedLanguage();
+  const isBn = language === "bn";
   const { shopInfo, setShopInfo } = useHydratedOrganization();
-  const shopName = shopInfo.name;
+  const shopName = shopInfo.name || initialShopInfo?.name || (isBn ? "মিষ্টি মেলা" : "Mishty Mela");
 
   React.useEffect(() => {
-    getCurrentSessionAction().then((session) => {
-      if (session) {
-        setActiveRole(session.role, session.name);
-      }
-    });
-    getOrganizationAction().then((org) => {
-      if (org) {
-        setShopInfo(org);
-      }
-    });
-  }, [setActiveRole, setShopInfo]);
+    if (initialSession) {
+      setActiveRole(initialSession.role, initialSession.name);
+    } else {
+      getCurrentSessionAction().then((session) => {
+        if (session) {
+          setActiveRole(session.role, session.name);
+        }
+      });
+    }
+
+    if (initialShopInfo) {
+      setShopInfo(initialShopInfo);
+    } else {
+      getOrganizationAction().then((org) => {
+        if (org) {
+          setShopInfo(org);
+        }
+      });
+    }
+  }, [initialSession, initialShopInfo, setActiveRole, setShopInfo]);
 
   const handleLogout = async () => {
     await logoutAction();
     window.location.href = "/login";
   };
 
-  const getCurrentModule = (path: string): NavItem["key"] => {
+  const getCurrentModule = (path: string): string => {
     if (path.startsWith("/pos")) return "pos";
     if (path.startsWith("/sales")) return "sales";
+    if (path.startsWith("/orders")) return "orders";
     if (path.startsWith("/products")) return "products";
     if (path.startsWith("/inventory")) return "inventory";
     if (path.startsWith("/finance")) return "finance";
     if (path.startsWith("/reports")) return "reports";
     if (path.startsWith("/settings")) return "settings";
+    if (path.startsWith("/profile")) return "profile";
     return "dashboard";
   };
 
   const currentModule = getCurrentModule(pathname);
-  const isAuthorized = canAccess(currentModule);
-
-  const visibleNavItems = NAV_ITEMS.filter((item) => canAccess(item.key));
+  const isAuthorized = canAccess(currentModule as any);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)] flex flex-col md:flex-row relative selection:bg-[var(--accent-soft)] selection:text-[var(--ink)] font-sans">
+      {/* Background Ambient Lighting Stage */}
+      <BrambleStage />
+
       {/* Mobile Top Bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-rose-600 flex items-center justify-center text-white font-bold text-sm">
-            MS
+      <div className="md:hidden flex items-center justify-between px-4 py-3 glass sticky top-0 z-40">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#5b48f0] to-[#0a93c4] flex items-center justify-center text-white font-bold text-sm shadow-sm">
+            মি
           </div>
           <div className="flex flex-col">
-            <span
-              className="font-bold text-slate-900 text-sm leading-tight truncate max-w-[150px]"
-              suppressHydrationWarning
-            >
-              {shopName || t("shopTitle")}
+            <span className="font-bold text-[var(--ink)] text-sm leading-tight truncate max-w-[140px]">
+              {shopName}
             </span>
-            <span className="text-xs text-slate-500 font-medium" suppressHydrationWarning>
-              {activeRole === "ADMIN" ? t("roleAdmin") : activeRole === "MANAGER" ? t("roleManager") : t("roleCashier")}
+            <span className="text-[11px] text-[var(--ink-3)] font-medium">
+              {activeRole}
             </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <BrambleThemeToggle />
           <LanguageToggle />
           <Link
             href="/pos"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-semibold shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] hover:opacity-90 text-white rounded-xl text-xs font-semibold shadow-xs"
           >
             <Store className="w-3.5 h-3.5" />
             POS
           </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 text-slate-600 hover:text-slate-900 rounded-md"
+            className="p-1.5 text-[var(--ink-2)] hover:text-[var(--ink)] rounded-lg"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -160,54 +221,35 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
         </div>
       </div>
 
-      {/* Desktop Collapsible Sidebar */}
+      {/* Desktop Floating Frosted Sidebar (Bramble Design) */}
       <aside
         className={cn(
-          "hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-200 shrink-0 sticky top-0 h-screen relative",
-          collapsed ? "w-16" : "w-64"
+          "hidden md:flex flex-col m-3 lg:m-4 rounded-[22px] glass shrink-0 sticky top-4 h-[calc(100vh-2rem)] z-30 transition-all duration-300 select-none overflow-hidden",
+          collapsed ? "w-[76px]" : "w-[240px]"
         )}
       >
-        {/* Floating border rail toggle - always easily clickable from anywhere */}
-        <button
-          type="button"
-          onClick={() => handleToggleCollapse()}
-          className="hidden md:flex absolute -right-3 top-20 z-30 w-6 h-6 bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-300 rounded-full shadow-sm items-center justify-center transition-all hover:scale-110 cursor-pointer"
-          title={collapsed ? "সাইডবার প্রসারিত করুন (Expand sidebar)" : "সাইডবার সংকুচিত করুন (Collapse sidebar)"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronLeft className="w-3.5 h-3.5" />
-          )}
-        </button>
-
-        {/* Brand & Sidebar Toggle */}
-        <div className="h-16 flex items-center justify-between px-3 border-b border-slate-100">
+        {/* Brand & Store Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-[var(--rule)]">
           {!collapsed ? (
             <>
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-md bg-rose-600 flex items-center justify-center text-white font-bold text-sm tracking-tight shadow-xs shrink-0">
-                  MS
+              <Link href="/dashboard" className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#5b48f0] to-[#0a93c4] flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0">
+                  মি
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span
-                    className="font-bold text-slate-900 text-sm leading-tight truncate max-w-[140px]"
-                    suppressHydrationWarning
-                  >
-                    {shopName || t("shopTitle")}
+                  <span className="font-bold text-[var(--ink)] text-sm leading-tight truncate">
+                    {shopName}
                   </span>
-                  <span className="text-xs text-slate-500 truncate" suppressHydrationWarning>
-                    {t("tagline")}
+                  <span className="text-xs text-[var(--ink-3)] truncate">
+                    {isBn ? "ত্রিশাল শাখা" : "Trishal Branch"}
                   </span>
                 </div>
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={() => handleToggleCollapse(true)}
-                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0"
-                title="সাইডবার সংকুচিত করুন (Collapse sidebar)"
-                aria-label="Collapse sidebar"
+                className="text-[var(--ink-3)] hover:text-[var(--ink)] p-1.5 rounded-lg hover:bg-[var(--hover)] transition-colors shrink-0"
+                title="সাইডবার সংকুচিত করুন"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -217,234 +259,286 @@ export const AppShell: React.FC<{ children: React.ReactNode }> = ({
               <button
                 type="button"
                 onClick={() => handleToggleCollapse(false)}
-                className="w-10 h-10 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:border-rose-300 flex items-center justify-center transition-all shadow-xs group"
-                title="সাইডবার প্রসারিত করুন / Expand sidebar"
-                aria-label="Expand sidebar"
+                className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#5b48f0] to-[#0a93c4] flex items-center justify-center text-white font-bold text-sm shadow-sm transition-transform hover:scale-105"
+                title="সাইডবার প্রসারিত করুন"
               >
-                <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                মি
               </button>
             </div>
           )}
         </div>
 
-        {/* Language Switcher in Sidebar */}
-        {!collapsed && (
-          <div className="px-3.5 pt-3 pb-1 flex items-center justify-between">
-            <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Language / ভাষা</span>
-            <LanguageToggle />
-          </div>
-        )}
+        {/* Grouped Navigation Links */}
+        <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto custom-scrollbar">
+          {NAV_GROUPS.map((group, gIdx) => {
+            const accessibleItems = group.items.filter((item) => canAccess(item.key as any));
+            if (accessibleItems.length === 0) return null;
 
-        {/* Primary Navigation */}
-        <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
-          {visibleNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? t(item.key) : undefined}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors group",
-                  isActive
-                    ? "bg-rose-50 text-rose-700 font-semibold"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                  collapsed && "justify-center px-2"
+              <div key={gIdx} className="space-y-1">
+                {!collapsed && (
+                  <p className="px-3 text-[11px] font-bold text-[var(--ink-3)] tracking-wider uppercase mb-1">
+                    {isBn ? group.groupNameBn : group.groupNameEn}
+                  </p>
                 )}
-              >
-                <Icon
-                  className={cn(
-                    "w-4 h-4 shrink-0 transition-colors",
-                    isActive ? "text-rose-700" : "text-slate-400 group-hover:text-slate-600"
-                  )}
-                />
-                {!collapsed && <span>{t(item.key)}</span>}
-              </Link>
+                {accessibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive =
+                    item.href === "/dashboard"
+                      ? pathname === "/dashboard"
+                      : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? (isBn ? item.labelBn : item.labelEn) : undefined}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all group relative",
+                        isActive
+                          ? "bg-[var(--well)] text-[var(--ink)] font-semibold shadow-[inset_0_1px_0_var(--rim-top),inset_0_0_0_1px_var(--rule)]"
+                          : "text-[var(--ink-2)] hover:bg-[var(--hover)] hover:text-[var(--ink)]",
+                        collapsed && "justify-center px-0"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "w-4 h-4 shrink-0 transition-colors",
+                          isActive ? "text-[var(--accent)]" : "text-[var(--ink-3)] group-hover:text-[var(--ink)]"
+                        )}
+                      />
+                      {!collapsed && (
+                        <span className="truncate flex-1">
+                          {isBn ? item.labelBn : item.labelEn}
+                        </span>
+                      )}
+                      {!collapsed && item.badgeCount && (
+                        <span
+                          className={cn(
+                            "px-1.5 py-0.5 rounded-full text-[10px] font-bold",
+                            item.badgeType === "warn"
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                              : "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300"
+                          )}
+                        >
+                          {item.badgeCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
         </nav>
 
-        {/* User profile / Sign Out */}
-        <div className="p-3 border-t border-slate-100 relative">
+        {/* Sidebar Footer: Live Store Pill & Rail Collapse */}
+        <div className="p-3 border-t border-[var(--rule)] flex flex-col gap-2">
           {!collapsed ? (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-700 shrink-0 text-xs font-bold">
-                  {activeUserName.charAt(0)}
-                </div>
-                <div className="flex flex-col truncate">
-                  <span className="text-xs font-semibold text-slate-900 truncate leading-tight">
-                    {activeUserName}
-                  </span>
-                  <span className="text-xs text-rose-600 font-bold tracking-wider">
-                    {activeRole === "ADMIN" ? t("roleAdmin") : activeRole === "MANAGER" ? t("roleManager") : t("roleCashier")}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-[var(--well)] border border-[var(--rule)] text-xs text-[var(--ink-2)] font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{isBn ? "দোকান চালু আছে" : "Store is live"}</span>
               </div>
               <button
                 type="button"
-                onClick={handleLogout}
-                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
-                title={t("signOut")}
+                onClick={() => handleToggleCollapse(true)}
+                className="p-1.5 text-[var(--ink-3)] hover:text-[var(--ink)] rounded-lg hover:bg-[var(--hover)] transition-colors"
+                title="সাইডবার সংকুচিত করুন"
               >
-                <LogOut className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="text-slate-400 hover:text-rose-600 p-1.5 rounded-md hover:bg-rose-50 transition-colors"
-                title={t("signOut")}
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" title="Store is live" />
               <button
                 type="button"
                 onClick={() => handleToggleCollapse(false)}
-                className="w-full flex justify-center text-slate-400 hover:text-rose-600 py-1 transition-colors"
-                title="সাইডবার প্রসারিত করুন / Expand sidebar"
-                aria-label="Expand sidebar"
+                className="p-1.5 text-[var(--ink-3)] hover:text-[var(--ink)] rounded-lg hover:bg-[var(--hover)] transition-colors"
+                title="সাইডবার প্রসারিত করুন"
               >
                 <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Profile & Signout Row */}
+          {!collapsed && (
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <Link
+                href="/profile"
+                className="flex items-center gap-2 overflow-hidden hover:opacity-85 transition-opacity flex-1 min-w-0"
+              >
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#5b48f0] to-[#0a93c4] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                  {activeUserName.charAt(0) || "U"}
+                </div>
+                <div className="flex flex-col truncate">
+                  <span className="font-semibold text-[var(--ink)] truncate leading-tight">
+                    {activeUserName}
+                  </span>
+                  <span className="text-[10px] text-[var(--accent)] font-bold">
+                    {activeRole}
+                  </span>
+                </div>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-1 text-[var(--ink-3)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-colors"
+                title={isBn ? "লগআউট" : "Sign out"}
+              >
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
         </div>
       </aside>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-slate-900/50 flex">
-          <div className="w-72 sm:w-80 bg-white h-full p-4 flex flex-col justify-between shadow-xl animate-in slide-in-from-left duration-200">
-            <div>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-900 text-base">{t("shopTitle")}</span>
-                  <span className="text-xs font-bold text-rose-700">
-                    {activeRole === "ADMIN" ? t("roleAdmin") : activeRole === "MANAGER" ? t("roleManager") : t("roleCashier")}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-1.5 text-slate-500 hover:text-slate-800 rounded-md"
-                  aria-label="Close menu"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="py-2.5 border-b border-slate-100">
-                <LanguageToggle />
-              </div>
-
-              <nav className="mt-3 space-y-1.5">
-                {visibleNavItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 px-3.5 py-3 rounded-lg text-sm sm:text-base font-bold transition-colors",
-                        isActive
-                          ? "bg-rose-50 text-rose-700 font-extrabold"
-                          : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
-                      )}
-                    >
-                      <Icon className="w-5 h-5 shrink-0" />
-                      <span>{t(item.key)}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs sm:text-sm">
-              <div className="flex flex-col">
-                <span className="font-bold text-slate-900 text-sm">{activeUserName}</span>
-                <span className="text-xs text-rose-700 font-extrabold">{activeRole}</span>
-              </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 text-slate-700 hover:text-rose-600 px-3 py-2 rounded-lg bg-slate-100 hover:bg-rose-50 font-bold transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>{t("signOut")}</span>
-              </button>
-            </div>
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col p-3 lg:p-4 z-10">
+        {/* Floating Solid Topbar (High-contrast opaque surface with subtle blur) */}
+        <header className="rounded-[20px] bg-white/95 dark:bg-[#0c0e18]/95 backdrop-blur-xl border border-[var(--rule)] shadow-sm px-4 py-2.5 flex items-center justify-between gap-3 mb-4 shrink-0">
+          {/* Search Input Bar with Command K badge */}
+          <div className="flex-1 max-w-md relative flex items-center">
+            <Search className="w-4 h-4 text-[var(--ink-3)] absolute left-3 pointer-events-none" />
+            <input
+              type="text"
+              placeholder={isBn ? "অর্ডার, পণ্য বা কাস্টমার খুঁজুন..." : "Search orders, products, customers..."}
+              className="w-full bg-[var(--well)] hover:bg-[var(--hover)] focus:bg-[var(--sheet-solid)] border border-[var(--rule)] rounded-xl pl-9 pr-12 py-1.5 text-xs text-[var(--ink)] placeholder-[var(--ink-3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition-all"
+            />
+            <kbd className="absolute right-3 px-1.5 py-0.5 text-[10px] font-mono text-[var(--ink-3)] bg-[var(--well)] border border-[var(--rule)] rounded">
+              ⌘K
+            </kbd>
           </div>
-          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
-        </div>
-      )}
 
-      {/* Main Content Area with Role Access Guard */}
-      <main className="flex-1 min-w-0 overflow-y-auto pb-20 md:pb-0">
-        <div className="max-w-[1440px] mx-auto p-4 sm:p-6 lg:p-8">
+          {/* Right Action Icons & Profile */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Gradient + Create button */}
+            <Link
+              href="/pos"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#5b48f0] to-[#0a93c4] hover:opacity-95 text-white text-xs font-semibold shadow-xs transition-opacity"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isBn ? "+ নতুন রসিদ" : "+ Create"}</span>
+            </Link>
+
+            {/* Light / Dark Mode Toggle */}
+            <BrambleThemeToggle />
+
+            {/* Language Switch */}
+            <LanguageToggle />
+
+            {/* Notifications Popover */}
+            <SmartAlertsPopover />
+
+            {/* User Profile Avatar Pill */}
+            <Link
+              href="/profile"
+              className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-[var(--hover)] transition-colors"
+              title={activeUserName}
+            >
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#ff6b6b] to-[#ff8e53] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                {activeUserName.slice(0, 2).toUpperCase()}
+              </div>
+            </Link>
+          </div>
+        </header>
+
+        {/* Content Body with Guard */}
+        <main className="flex-1 min-w-0 overflow-y-auto">
           {isAuthorized ? (
             children
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 px-4 text-center bg-white border border-slate-200 rounded-lg shadow-xs my-6">
-              <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-4">
-                <Lock className="w-8 h-8" />
+            <div className="bramble-card p-12 text-center max-w-lg mx-auto my-12">
+              <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-7 h-7" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900 mb-2">
+              <h2 className="text-lg font-bold text-[var(--ink)] mb-1">
                 {t("accessDeniedTitle")}
               </h2>
-              <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed">
-                {activeRole === "CASHIER"
-                  ? t("accessDeniedCashier")
-                  : t("accessDeniedManager")}
+              <p className="text-xs text-[var(--ink-3)] mb-6 leading-relaxed">
+                {activeRole === "CASHIER" ? t("accessDeniedCashier") : t("accessDeniedManager")}
               </p>
               <Link
                 href="/pos"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-sm font-bold shadow-md transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--accent)] text-white rounded-xl text-xs font-semibold shadow-md hover:opacity-90 transition-opacity"
               >
                 <Store className="w-4 h-4" />
                 <span>{t("goToPos")}</span>
               </Link>
             </div>
           )}
+        </main>
+      </div>
+
+      {/* Mobile Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex">
+          <div className="w-72 bg-[var(--sheet-solid)] h-full p-4 flex flex-col justify-between shadow-2xl">
+            <div>
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--rule)]">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#5b48f0] to-[#0a93c4] flex items-center justify-center text-white font-bold text-sm">
+                    মি
+                  </div>
+                  <div>
+                    <span className="font-bold text-[var(--ink)] text-sm">{shopName}</span>
+                    <p className="text-[10px] text-[var(--accent)] font-bold">{activeRole}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1 text-[var(--ink-3)] hover:text-[var(--ink)]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="py-2 border-b border-[var(--rule)] flex items-center justify-between">
+                <BrambleThemeToggle />
+                <LanguageToggle />
+              </div>
+
+              <nav className="mt-3 space-y-1">
+                {NAV_GROUPS.flatMap((g) => g.items)
+                  .filter((item) => canAccess(item.key as any))
+                  .map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium",
+                          isActive
+                            ? "bg-[var(--well)] text-[var(--accent)] font-bold"
+                            : "text-[var(--ink-2)] hover:bg-[var(--hover)]"
+                        )}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{isBn ? item.labelBn : item.labelEn}</span>
+                      </Link>
+                    );
+                  })}
+              </nav>
+            </div>
+
+            <div className="pt-3 border-t border-[var(--rule)] flex items-center justify-between text-xs">
+              <span className="font-semibold text-[var(--ink)]">{activeUserName}</span>
+              <button
+                onClick={handleLogout}
+                className="text-red-500 font-medium hover:underline"
+              >
+                {isBn ? "লগআউট" : "Sign out"}
+              </button>
+            </div>
+          </div>
+          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
         </div>
-      </main>
-      <BottomNav items={visibleNavItems} pathname={pathname} t={t} onMore={() => setMobileMenuOpen(true)} />
+      )}
     </div>
   );
 };
-
-
-/** Phone navigation: four main destinations within thumb reach, everything else behind "More". */
-function BottomNav({ items, pathname, t, onMore }: {
-  items: NavItem[]; pathname: string; t: (k: any) => string; onMore: () => void;
-}) {
-  if (items.length < 2) return null;
-  const order = ["dashboard", "pos", "sales", "products"];
-  const main = order.map((k) => items.find((i) => i.key === k)).filter(Boolean) as NavItem[];
-  const showMore = items.length > main.length;
-  const cell = "flex flex-1 flex-col items-center justify-center gap-0.5 min-h-[56px] text-xs";
-  return (
-    <nav aria-label="Main" className="md:hidden fixed bottom-0 inset-x-0 z-40 flex bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
-      {main.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        const Icon = item.icon;
-        return (
-          <Link key={item.key} href={item.href} aria-current={active ? "page" : undefined}
-            className={`${cell} ${active ? "text-blue-700 font-medium" : "text-slate-600"}`}>
-            <Icon className="w-5 h-5" />
-            <span>{t(item.key)}</span>
-          </Link>
-        );
-      })}
-      {showMore && (
-        <button type="button" onClick={onMore} className={`${cell} text-slate-600`}>
-          <MoreHorizontal className="w-5 h-5" />
-          <span>More</span>
-        </button>
-      )}
-    </nav>
-  );
-}

@@ -40,13 +40,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow all authenticated users to access their own profile
+  if (pathname.startsWith("/profile")) {
+    return NextResponse.next();
+  }
+
   // 4. Role-based Route Guards
   const role = session.role;
 
   // Manager routes
-  const managerAllowedPrefixes = ["/pos", "/products", "/inventory", "/finance"];
+  const managerAllowedPrefixes = ["/pos", "/products", "/inventory", "/finance", "/profile"];
   // Cashier routes
-  const cashierAllowedPrefixes = ["/pos"];
+  const cashierAllowedPrefixes = ["/pos", "/profile"];
 
   if (role === "CASHIER" || role === "STAFF") {
     const isAllowed = cashierAllowedPrefixes.some((p) => pathname.startsWith(p));

@@ -13,6 +13,7 @@ import {
   Filter,
   ArrowUpDown,
   Boxes,
+  Barcode,
 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { toggleProductActive, deleteProduct } from "@/actions/products";
 import { ProductFormModal } from "./ProductFormModal";
 import { CategoryManagerModal } from "./CategoryManagerModal";
+import { BarcodeStickerModal } from "./BarcodeStickerModal";
 import { Pagination } from "@/components/shared/Pagination";
 import { useHydratedLanguage } from "@/stores/language";
 import Link from "next/link";
@@ -74,6 +76,7 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
   const [deletingProduct, setDeletingProduct] = useState<ProductItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [barcodeProduct, setBarcodeProduct] = useState<ProductItem | null>(null);
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -325,6 +328,14 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
                         </Link>
                         <button
                           type="button"
+                          onClick={() => setBarcodeProduct(product)}
+                          className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                          title={isBn ? "বারকোড স্টিকার প্রিন্ট" : "Print Barcode Sticker"}
+                        >
+                          <Barcode className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenEdit(product)}
                           className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                           title={isBn ? "সম্পাদনা" : "Edit"}
@@ -571,6 +582,13 @@ export const ProductsTable: React.FC<ProductsTableProps> = ({
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      {/* Barcode Sticker Generator Modal */}
+      <BarcodeStickerModal
+        isOpen={!!barcodeProduct}
+        onClose={() => setBarcodeProduct(null)}
+        product={barcodeProduct}
+      />
     </div>
   );
 };

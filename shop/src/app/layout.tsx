@@ -20,8 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="bn">
-      <body className="antialiased bg-slate-50 text-slate-900 min-h-screen selection:bg-blue-600 selection:text-white">
+    <html lang="bn" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem("bramble-theme");var p=window.matchMedia("(prefers-color-scheme: dark)").matches;var t=s==="dark"||(!s&&p)?"dark":"light";document.documentElement.dataset.theme=t;if(t==="dark"){document.documentElement.classList.add("dark")}else{document.documentElement.classList.remove("dark")}}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className="antialiased bg-[var(--bg)] text-[var(--ink)] min-h-screen selection:bg-[var(--accent-soft)] selection:text-[var(--ink)]">
         {children}
       </body>
     </html>

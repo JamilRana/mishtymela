@@ -18,7 +18,7 @@ export async function getProducts(options?: { sellableOnly?: boolean }) {
 
   const products = await prisma.product.findMany({
     where,
-    include: { category: true },
+    include: { category: true, brand: true, unitRef: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -30,14 +30,20 @@ export async function getProducts(options?: { sellableOnly?: boolean }) {
     imageUrl: p.imageUrl,
     unit: p.unit,
     sellingPrice: Number(p.sellingPrice),
+    wholesalePrice: p.wholesalePrice ? Number(p.wholesalePrice) : null,
     avgCost: Number(p.avgCost),
     stockQty: Number(p.stockQty),
     reorderLevel: Number(p.reorderLevel),
+    expiryDays: p.expiryDays ?? null,
     active: p.active,
     productType: p.productType,
     isSellable: p.isSellable,
     categoryName: p.category?.name ?? "Uncategorized",
     categoryId: p.categoryId,
+    brandName: p.brand?.name ?? null,
+    brandId: p.brandId,
+    unitId: p.unitId,
+    unitLabel: p.unitRef?.shortName ?? p.unit,
   }));
 }
 
@@ -189,14 +195,18 @@ export async function deleteCategory(id: string) {
 const productSchema = z.object({
   name: z.string().min(2),
   sku: z.string().min(1),
-  barcode: z.string().optional(),
-  imageUrl: z.string().optional(),
-  categoryId: z.string().optional(),
+  barcode: z.string().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  categoryId: z.string().optional().nullable(),
+  brandId: z.string().optional().nullable(),
+  unitId: z.string().optional().nullable(),
   unit: z.string().default("pcs"),
   productType: z.enum(["RETAIL", "RAW_MATERIAL", "PACKAGING"]).default("RETAIL"),
   isSellable: z.boolean().default(true),
   sellingPrice: z.coerce.number().min(0),
+  wholesalePrice: z.coerce.number().min(0).optional().nullable(),
   reorderLevel: z.coerce.number().min(0).default(5),
+  expiryDays: z.coerce.number().min(0).optional().nullable(),
   openingStock: z.coerce.number().min(0).optional(),
   openingCost: z.coerce.number().min(0).optional(),
 });
@@ -216,11 +226,15 @@ export async function createProduct(formData: z.input<typeof productSchema>) {
         barcode: data.barcode || null,
         imageUrl: data.imageUrl || null,
         categoryId: data.categoryId || null,
+        brandId: data.brandId || null,
+        unitId: data.unitId || null,
         unit: data.unit,
         productType: data.productType,
         isSellable: data.isSellable,
         sellingPrice: data.sellingPrice,
+        wholesalePrice: data.wholesalePrice ? data.wholesalePrice : null,
         reorderLevel: data.reorderLevel,
+        expiryDays: data.expiryDays ? data.expiryDays : null,
         stockQty: data.openingStock || 0,
         avgCost: data.openingCost || 0,
       },
@@ -246,7 +260,28 @@ export async function createProduct(formData: z.input<typeof productSchema>) {
       revalidatePath("/pos");
     } catch {}
 
-    return { product };
+    const serialized = {
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      barcode: product.barcode,
+      imageUrl: product.imageUrl,
+      unit: product.unit,
+      sellingPrice: Number(product.sellingPrice),
+      wholesalePrice: product.wholesalePrice ? Number(product.wholesalePrice) : null,
+      avgCost: Number(product.avgCost),
+      stockQty: Number(product.stockQty),
+      reorderLevel: Number(product.reorderLevel),
+      expiryDays: product.expiryDays,
+      active: product.active,
+      productType: product.productType,
+      isSellable: product.isSellable,
+      categoryId: product.categoryId,
+      brandId: product.brandId,
+      unitId: product.unitId,
+    };
+
+    return { product: serialized };
   }, "Failed to create product.");
 }
 
@@ -267,11 +302,15 @@ export async function updateProduct(
     if (data.barcode !== undefined) updateData.barcode = data.barcode || null;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null;
+    if (data.brandId !== undefined) updateData.brandId = data.brandId || null;
+    if (data.unitId !== undefined) updateData.unitId = data.unitId || null;
     if (data.unit !== undefined) updateData.unit = data.unit;
     if (data.productType !== undefined) updateData.productType = data.productType;
     if (data.isSellable !== undefined) updateData.isSellable = data.isSellable;
     if (data.sellingPrice !== undefined) updateData.sellingPrice = data.sellingPrice;
+    if (data.wholesalePrice !== undefined) updateData.wholesalePrice = data.wholesalePrice ? data.wholesalePrice : null;
     if (data.reorderLevel !== undefined) updateData.reorderLevel = data.reorderLevel;
+    if (data.expiryDays !== undefined) updateData.expiryDays = data.expiryDays ? data.expiryDays : null;
 
     const product = await prisma.product.update({
       where: { id, organizationId: orgId },
@@ -284,7 +323,28 @@ export async function updateProduct(
       revalidatePath("/pos");
     } catch {}
 
-    return { product };
+    const serialized = {
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      barcode: product.barcode,
+      imageUrl: product.imageUrl,
+      unit: product.unit,
+      sellingPrice: Number(product.sellingPrice),
+      wholesalePrice: product.wholesalePrice ? Number(product.wholesalePrice) : null,
+      avgCost: Number(product.avgCost),
+      stockQty: Number(product.stockQty),
+      reorderLevel: Number(product.reorderLevel),
+      expiryDays: product.expiryDays,
+      active: product.active,
+      productType: product.productType,
+      isSellable: product.isSellable,
+      categoryId: product.categoryId,
+      brandId: product.brandId,
+      unitId: product.unitId,
+    };
+
+    return { product: serialized };
   }, "Failed to update product.");
 }
 

@@ -9,7 +9,7 @@ interface RoleStore {
   activeRole: Role;
   activeUserName: string;
   setActiveRole: (role: Role, userName?: string) => void;
-  canAccess: (module: "dashboard" | "pos" | "products" | "inventory" | "sales" | "finance" | "reports" | "settings") => boolean;
+  canAccess: (module: "dashboard" | "pos" | "products" | "inventory" | "sales" | "orders" | "returns" | "purchases" | "dues" | "finance" | "payroll" | "reports" | "settings" | "profile" | "contacts") => boolean;
 }
 
 export const useRoleStore = create<RoleStore>()(
@@ -31,17 +31,24 @@ export const useRoleStore = create<RoleStore>()(
         });
       },
       canAccess: (module) => {
+        // Every logged-in user can access their personal profile
+        if (module === "profile") return true;
+
         const r = get().activeRole;
         // Admin / Owner has full access to all modules
         if (r === "ADMIN" || r === "OWNER") return true;
 
-        // Manager gets POS, Products, and Inventory access ONLY
+        // Manager gets POS, Products, Inventory, Orders, Returns, Purchases, Dues, Contacts, and Payroll access
         if (r === "MANAGER") {
-          return module === "pos" || module === "products" || module === "inventory";
+          return module === "pos" || module === "products" || module === "inventory" || module === "orders" || module === "returns" || module === "purchases" || module === "dues" || module === "contacts" || module === "payroll";
         }
 
-        // Cashier ONLY has POS access
-        if (r === "CASHIER" || r === "STAFF") {
+        // Cashier has POS, Orders, Returns, and Customer Dues collection access
+        if (r === "CASHIER") {
+          return module === "pos" || module === "orders" || module === "returns" || module === "dues";
+        }
+
+        if (r === "STAFF") {
           return module === "pos";
         }
 

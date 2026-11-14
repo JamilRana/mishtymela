@@ -27,11 +27,20 @@ import {
   PieChart,
   BarChart3,
   CalendarDays,
+  Users,
+  ArrowLeftRight,
+  Truck,
 } from "lucide-react";
 import { MoneyText, formatMoney } from "@/components/shared/MoneyText";
 import { QuantityText } from "@/components/shared/QuantityText";
 import { toBnDigits } from "@/lib/bangla-numbers";
-import { getDateRangeReportAction, DateRangeReportFilter } from "@/actions/reports";
+import {
+  getDateRangeReportAction,
+  DateRangeReportFilter,
+  getStaffPerformanceReportAction,
+  getStockMovementLedgerAction,
+  getSupplierPurchaseRegisterAction,
+} from "@/actions/reports";
 import { useHydratedLanguage } from "@/stores/language";
 import { useOrganizationStore } from "@/stores/organization";
 import { TableSkeleton, KpiCardSkeleton } from "@/components/shared/Skeleton";
@@ -167,8 +176,41 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<
-    "statement" | "income_expense" | "closing_balance" | "monthly" | "items" | "purchases"
+    "statement" | "income_expense" | "closing_balance" | "monthly" | "items" | "purchases" | "staff" | "stock_ledger" | "suppliers"
   >("statement");
+
+  const [staffReport, setStaffReport] = useState<any | null>(null);
+  const [stockLedgerReport, setStockLedgerReport] = useState<any | null>(null);
+  const [supplierReport, setSupplierReport] = useState<any | null>(null);
+
+  const handleTabSelect = (tabId: typeof activeTab) => {
+    setActiveTab(tabId);
+    if (tabId === "staff" && !staffReport) {
+      startTransition(async () => {
+        const res = await getStaffPerformanceReportAction({
+          startDate: data.startDateStr,
+          endDate: data.endDateStr,
+        });
+        setStaffReport(res);
+      });
+    } else if (tabId === "stock_ledger" && !stockLedgerReport) {
+      startTransition(async () => {
+        const res = await getStockMovementLedgerAction({
+          startDate: data.startDateStr,
+          endDate: data.endDateStr,
+        });
+        setStockLedgerReport(res);
+      });
+    } else if (tabId === "suppliers" && !supplierReport) {
+      startTransition(async () => {
+        const res = await getSupplierPurchaseRegisterAction({
+          startDate: data.startDateStr,
+          endDate: data.endDateStr,
+        });
+        setSupplierReport(res);
+      });
+    }
+  };
 
   // Filter States - Default is Today
   const [selectedPeriod, setSelectedPeriod] = useState<
@@ -533,6 +575,9 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 { id: "monthly", label: "মাসভিত্তিক রিপোর্ট", icon: CalendarDays },
                 { id: "items", label: "মিষ্টির আইটেম রিপোর্ট", icon: ShoppingBag },
                 { id: "purchases", label: "কাঁচামাল ও বক্স ক্রয়", icon: Boxes },
+                { id: "staff", label: "কর্মীভিত্তিক পারফরম্যান্স", icon: Users },
+                { id: "stock_ledger", label: "Stock IN/OUT লেজার", icon: ArrowLeftRight },
+                { id: "suppliers", label: "সাপ্লাইয়ার রেজিস্টার", icon: Truck },
               ] as const
             ).map((tab) => {
               const Icon = tab.icon;
@@ -541,7 +586,7 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabSelect(tab.id)}
                   className={cn(
                     "flex items-center gap-1.5 px-3 min-h-11 whitespace-nowrap rounded-md text-sm transition-colors cursor-pointer",
                     isActive
@@ -1216,6 +1261,205 @@ export const DateMonthReportsView: React.FC<DateMonthReportsViewProps> = ({
                             </td>
                             <td className="py-3 px-4 text-right font-semibold text-slate-900">
                               <MoneyText amount={m.totalCost} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 7: STAFF PERFORMANCE LEADERBOARD */}
+          {activeTab === "staff" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      কর্মীভিত্তিক বিক্রয় পারফরম্যান্স (Staff Sales Leaderboard)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      ক্যাশিয়ার ও বিক্রয়কর্মীদের মোট ইনভয়েস এবং বিক্রয় অবদান
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-4">কর্মীর নাম</th>
+                        <th className="py-2.5 px-3">পদবি / রোল</th>
+                        <th className="py-2.5 px-3 text-center">মোট ইনভয়েস</th>
+                        <th className="py-2.5 px-3 text-right">গড় ইনভয়েস সাইজ</th>
+                        <th className="py-2.5 px-4 text-right font-semibold">সর্বমোট বিক্রয়</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {!staffReport || staffReport.staffList.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center py-8 text-slate-400">
+                            {isPending ? "কর্মী ডাটা লোড হচ্ছে..." : "এই সময়কালে কোনো বিক্রয় রেকর্ড পাওয়া যায়নি।"}
+                          </td>
+                        </tr>
+                      ) : (
+                        staffReport.staffList.map((st: any) => (
+                          <tr key={st.userId} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3 px-4 font-semibold text-slate-900">{st.name}</td>
+                            <td className="py-3 px-3">
+                              <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-mono">
+                                {st.role}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-center font-mono font-medium">
+                              {toBnDigits(st.invoiceCount)} টি
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono">
+                              <MoneyText amount={st.avgInvoiceValue} />
+                            </td>
+                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                              <MoneyText amount={st.totalSales} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 8: STOCK IN/OUT LEDGER */}
+          {activeTab === "stock_ledger" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      লাইভ Stock IN/OUT লেজার (Inventory Movement Timeline)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      পণ্য ও মিষ্টির আগমন (IN) ও নির্গমন (OUT)-এর পূর্ণাঙ্গ টাইমলাইন
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-4">সময়</th>
+                        <th className="py-2.5 px-3">পণ্য</th>
+                        <th className="py-2.5 px-3">মুভমেন্ট ধরন</th>
+                        <th className="py-2.5 px-3 text-right">পরিমাণ পরিবর্তন</th>
+                        <th className="py-2.5 px-3 text-right">একক খরচ</th>
+                        <th className="py-2.5 px-4 text-right font-semibold">অবশিষ্ট মজুদ</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {!stockLedgerReport || stockLedgerReport.movements.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-slate-400">
+                            {isPending ? "স্টক মুভমেন্ট লোড হচ্ছে..." : "কোনো স্টক মুভমেন্ট রেকর্ড নেই।"}
+                          </td>
+                        </tr>
+                      ) : (
+                        stockLedgerReport.movements.map((m: any) => {
+                          const isPositive = m.quantityDelta > 0;
+                          return (
+                            <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                                {toBnDigits(m.createdAt.slice(0, 16).replace("T", " "))}
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="font-semibold text-slate-900 block">{m.productName}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">{m.sku}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                    isPositive
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-rose-50 text-rose-700 border border-rose-200"
+                                  }`}
+                                >
+                                  {m.type}
+                                </span>
+                              </td>
+                              <td className={`py-3 px-3 text-right font-mono font-bold ${isPositive ? "text-emerald-700" : "text-rose-700"}`}>
+                                {isPositive ? "+" : ""}{toBnDigits(m.quantityDelta)} {m.unit}
+                              </td>
+                              <td className="py-3 px-3 text-right font-mono">
+                                <MoneyText amount={m.unitCost} />
+                              </td>
+                              <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                                {toBnDigits(m.balanceAfter)} {m.unit}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 9: SUPPLIER PURCHASE REGISTER */}
+          {activeTab === "suppliers" && (
+            <div className="space-y-6">
+              <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      সাপ্লাইয়ার ক্রয় ও চালান রেজিস্টার (Supplier Purchase Register)
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      সরবরাহকারীভিত্তিক কাঁচামাল ও মিষ্টি ক্রয়ের মোট ভলিউম ও বকেয়া হিসাব
+                    </p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-4">সাপ্লাইয়ারের নাম</th>
+                        <th className="py-2.5 px-3">মোবাইল</th>
+                        <th className="py-2.5 px-3 text-center">চালান সংখ্যা</th>
+                        <th className="py-2.5 px-3 text-right">পরিশোধিত</th>
+                        <th className="py-2.5 px-3 text-right text-rose-700 font-semibold">বকেয়া দেনা</th>
+                        <th className="py-2.5 px-4 text-right font-semibold">মোট ক্রয় মূল্য</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {!supplierReport || supplierReport.suppliers.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="text-center py-8 text-slate-400">
+                            {isPending ? "সাপ্লাইয়ার ডাটা লোড হচ্ছে..." : "কোনো সাপ্লাইয়ার ক্রয় রেকর্ড নেই।"}
+                          </td>
+                        </tr>
+                      ) : (
+                        supplierReport.suppliers.map((s: any) => (
+                          <tr key={s.supplierId} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="py-3 px-4 font-semibold text-slate-900">{s.supplierName}</td>
+                            <td className="py-3 px-3 font-mono text-slate-500">{s.supplierPhone}</td>
+                            <td className="py-3 px-3 text-center font-mono font-medium">
+                              {toBnDigits(s.billsCount)} টি
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-emerald-700 font-medium">
+                              <MoneyText amount={s.paidAmount} />
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-rose-700 font-bold">
+                              <MoneyText amount={s.dueAmount} />
+                            </td>
+                            <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                              <MoneyText amount={s.totalPurchases} />
                             </td>
                           </tr>
                         ))

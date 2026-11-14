@@ -35,6 +35,7 @@ import { AccountStatementTab } from "./AccountStatementTab";
 import { toBnDigits } from "@/lib/bangla-numbers";
 import { useHydratedLanguage } from "@/stores/language";
 import { cn } from "@/lib/utils";
+import { TxSource } from "@prisma/client";
 
 interface FinanceAccount {
   id: string;
@@ -53,7 +54,7 @@ export interface TxCategoryItem {
 interface TransactionRecord {
   id: string;
   type: "INCOME" | "EXPENSE";
-  source: "SALE" | "PURCHASE" | "MANUAL" | "TRANSFER" | "CLOSING_ADJUSTMENT" | "REFUND";
+  source: TxSource;
   amount: number;
   accountName: string;
   categoryName: string;

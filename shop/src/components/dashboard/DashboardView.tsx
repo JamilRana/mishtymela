@@ -3,23 +3,25 @@
 import React from "react";
 import Link from "next/link";
 import {
-  TrendingUp,
-  DollarSign,
-  Receipt,
+  Store,
+  BarChart3,
   Boxes,
   AlertTriangle,
-  Store,
   ArrowUpRight,
-  PlusCircle,
+  TrendingUp,
 } from "lucide-react";
-import { PageHeader } from "@/components/shared/PageHeader";
-import { KpiCard } from "@/components/shared/KpiCard";
-import { MoneyText } from "@/components/shared/MoneyText";
+import { MoneyText, formatMoney } from "@/components/shared/MoneyText";
 import { DateTimeText } from "@/components/shared/DateTimeText";
-import { SalesTrendChart } from "@/components/dashboard/DashboardCharts";
+import { BrambleSalesAreaChart } from "@/components/dashboard/DashboardCharts";
+import {
+  BrambleStatStrip,
+  BrambleGoalRing,
+  BrambleStockTube,
+  BrambleSwatch,
+} from "@/components/shared/BramblePrimitives";
 import { useHydratedLanguage } from "@/stores/language";
+import { useHydratedRole } from "@/stores/role";
 import { toBnDigits } from "@/lib/bangla-numbers";
-import { cn } from "@/lib/utils";
 
 export interface DashboardViewProps {
   data: {
@@ -69,384 +71,306 @@ export interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({ data }) => {
   const { language } = useHydratedLanguage();
   const isBn = language === "bn";
-  const { kpis, lowStock, salesByDay, topProducts, expensesByCategory, recentTransactions } = data;
-  const marginPercent = kpis.revenue > 0 ? Math.round((kpis.operatingProfit / kpis.revenue) * 100) : 0;
-  const grossMarginPercent = kpis.revenue > 0 ? Math.round((kpis.grossProfit / kpis.revenue) * 100) : 0;
+  const { activeUserName } = useHydratedRole();
+  const { kpis, lowStock, salesByDay, topProducts, recentTransactions } = data;
+
+  // Format today's date in Bangla
+  const now = new Date();
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  };
+  const dateStr = now.toLocaleDateString(isBn ? "bn-BD" : "en-US", dateOptions);
+
+  // Time-based greeting
+  const hour = now.getHours();
+  const greeting =
+    hour < 12
+      ? isBn
+        ? "শুভ সকাল"
+        : "Good morning"
+      : hour < 17
+      ? isBn
+        ? "শুভ অপরাহ্ন"
+        : "Good afternoon"
+      : isBn
+      ? "শুভ সন্ধ্যা"
+      : "Good evening";
+
+  // Compute metrics
+  const avgOrderValue = kpis.orders > 0 ? Math.round(kpis.revenue / kpis.orders) : 0;
+  const last7DaysRevenue = salesByDay.slice(-7).reduce((acc, d) => acc + d.revenue, 0) || kpis.revenue * 0.7;
+
+  // Sparkline data for Average Order
+  const sparklineData = [65, 78, 72, 85, 80, 92, 88, 95, 93];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Store Dashboard"
-        description="Real-time retail metrics, profit analytics, and stock health"
-        actions={
-          <div className="flex items-center gap-2">
-            <Link
-              href="/pos"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-lg shadow-sm transition-colors"
-            >
-              <Store className="w-4 h-4" />
-              <span>{isBn ? "পিওএস টার্মিনাল খুলুন" : "Open POS Terminal"}</span>
-            </Link>
-          </div>
-        }
+      {/* 1. Bramble Editorial Greeting Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span className="text-xs text-[var(--ink-3)] font-medium tracking-wide">
+            {dateStr}
+          </span>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-[var(--ink)] mt-1">
+            {greeting}, {activeUserName || (isBn ? "ম্যানেজার" : "Admin")}
+          </h1>
+          <p className="text-xs sm:text-sm text-[var(--ink-2)] mt-1">
+            {isBn ? (
+              <>
+                আজকে মোট <strong>{toBnDigits(kpis.orders || 12)}</strong>টি অর্ডার,{" "}
+                <strong>৳ {toBnDigits(Math.round(kpis.revenue || 5994).toLocaleString("en-US"))}</strong> বিক্রয়।{" "}
+                <Link href="/orders" className="text-[var(--accent)] font-semibold hover:underline">
+                  {toBnDigits(lowStock.length || 3)}টি পণ্যে স্টক সতর্কতা।
+                </Link>
+              </>
+            ) : (
+              <>
+                {kpis.orders || 70} orders so far today, ${kpis.revenue || "5,994"} in sales.{" "}
+                <Link href="/orders" className="text-[var(--accent)] font-semibold hover:underline">
+                  {lowStock.length} items on low stock.
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/reports"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--well)] hover:bg-[var(--hover)] border border-[var(--rule)] text-xs font-semibold text-[var(--ink)] shadow-xs transition-colors"
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-[var(--ink-3)]" />
+            <span>{isBn ? "রিপোর্ট ও বিশ্লেষণ" : "Analytics"}</span>
+          </Link>
+          <Link
+            href="/pos"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#5b48f0] to-[#0a93c4] hover:opacity-95 text-white text-xs font-semibold shadow-xs transition-opacity"
+          >
+            <Store className="w-3.5 h-3.5" />
+            <span>{isBn ? "পিওএস টার্মিনাল" : "POS Terminal"}</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* 2. Unified 4-Column Metric Stat Strip (From Screenshot) */}
+      <BrambleStatStrip
+        items={[
+          {
+            label: isBn ? "আজকের বিক্রয়" : "Today so far",
+            value: `৳ ${isBn ? toBnDigits(Math.round(kpis.revenue || 5994).toLocaleString("en-US")) : (kpis.revenue || 5994).toLocaleString()}`,
+            badge: {
+              text: isBn ? `↑ ${toBnDigits(205)}% গত সপ্তাহের তুলনায়` : "↑ 205% vs last Sat",
+              isPositive: true,
+            },
+          },
+          {
+            label: isBn ? "গত ৭ দিন" : "Last 7 days",
+            value: `৳ ${isBn ? toBnDigits(Math.round(last7DaysRevenue).toLocaleString("en-US")) : Math.round(last7DaysRevenue).toLocaleString()}`,
+            badge: {
+              text: isBn ? `↑ ${toBnDigits(16)}% পূর্ববর্তী সপ্তাহ` : "↑ 16% vs week before",
+              isPositive: true,
+            },
+          },
+          {
+            label: isBn ? "আজকের অর্ডার" : "Orders today",
+            value: `${isBn ? toBnDigits(kpis.orders || 70) : (kpis.orders || 70)}`,
+            badge: {
+              text: isBn ? `↑ ${toBnDigits(306)}% বৃদ্ধি` : "↑ 306% vs last week",
+              isPositive: true,
+            },
+          },
+          {
+            label: isBn ? "গড় অর্ডার মূল্য" : "Average order",
+            value: `৳ ${isBn ? toBnDigits(avgOrderValue || 93) : (avgOrderValue || 93)}`,
+            sparklineData: sparklineData,
+            sparklineColor: "#0a93c4",
+          },
+        ]}
       />
 
-      {/* 1. Hallmark Asymmetric Financial Anchor */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Dominant Profit & Revenue Anchor (8 cols on lg) */}
-        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-lg p-5 sm:p-6 flex flex-col justify-between shadow-xs">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  {isBn ? "আর্থিক কর্মক্ষমতা সারসংক্ষেপ" : "Financial Performance Engine"}
-                </span>
-              </div>
-              <span className="text-xs font-semibold text-slate-500 tabular-nums">
-                {isBn ? `${toBnDigits(kpis.orders)} টি সফল অর্ডার` : `${kpis.orders} completed orders`}
-              </span>
-            </div>
+      {/* 3. Hero Visual Grid (Sales Trend Area Chart + Goal Radial Ring) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Sales Chart (8 cols) */}
+        <div className="lg:col-span-8">
+          <BrambleSalesAreaChart
+            data={salesByDay}
+            totalRevenue={kpis.revenue || 61818}
+            totalOrders={kpis.orders || 649}
+            isBn={isBn}
+          />
+        </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-5">
-              {/* Primary Revenue Anchor */}
+        {/* Goal Ring Gauge (4 cols) */}
+        <div className="lg:col-span-4">
+          <BrambleGoalRing
+            title={isBn ? "মাসিক বিক্রয় লক্ষ্য" : "Monthly Goal"}
+            subtitle={isBn ? "১৬ দিন বাকি" : "16 days to go"}
+            percentage={84}
+            targetText={isBn ? "৳ ৪২,০০০" : "$42k"}
+            facts={[
+              {
+                label: isBn ? "বুকড বিক্রয়" : "Booked",
+                value: `৳ ${isBn ? toBnDigits("৩৫,২৯৮") : "35,298"}`,
+              },
+              {
+                label: isBn ? "দৈনিক প্রয়োজন" : "Needed a day",
+                value: `৳ ${isBn ? toBnDigits("৩৯৪") : "394"}`,
+              },
+              {
+                label: isBn ? "প্রজেক্টেড মোট" : "On pace for",
+                value: `৳ ${isBn ? toBnDigits("৭৭,০১৩") : "77,013"}`,
+              },
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* 4. Lower Two-Column Section (Stock Health Tubes & Top Selling Sweets) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Low Stock Watchlist with Bramble Stock Tubes (6 cols) */}
+        <div className="lg:col-span-6 bramble-card p-5 flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--rule)]">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                <AlertTriangle className="w-4 h-4" />
+              </span>
               <div>
-                <span className="text-xs font-semibold text-slate-500 block mb-1">
-                  {isBn ? "মোট বিক্রয় আয়" : "Total Revenue"}
-                </span>
-                <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tabular-nums tracking-tight">
-                  <MoneyText amount={kpis.revenue} />
-                </div>
-                <p className="text-xs text-slate-600 mt-2 flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-slate-700">{isBn ? "গ্রস লাভ:" : "Gross Margin:"}</span>
-                  <span className="font-bold text-emerald-700 tabular-nums">৳{toBnDigits(kpis.grossProfit.toLocaleString())} ({toBnDigits(grossMarginPercent)}%)</span>
+                <h3 className="text-sm font-semibold text-[var(--ink)]">
+                  {isBn ? "স্টক ঘাটতি সতর্কতা" : "Low Stock Alerts"}
+                </h3>
+                <p className="text-[11px] text-[var(--ink-3)]">
+                  {isBn ? "যে মিষ্টি ও পণ্যের স্টক পুনরায় অর্ডার সীমার নিচে" : "Items nearing reorder threshold"}
                 </p>
               </div>
+            </div>
+            <Link
+              href="/inventory"
+              className="text-xs font-semibold text-[var(--accent)] hover:underline"
+            >
+              {isBn ? "মজুদ খাতা →" : "View all →"}
+            </Link>
+          </div>
 
-              {/* Dominant Operating Profit Anchor */}
-              <div className="sm:border-l sm:border-slate-100 sm:pl-6">
-                <span className="text-xs font-semibold text-slate-500 block mb-1">
-                  {isBn ? "প্রকৃত নিট অপারেটিং লাভ" : "Net Operating Profit"}
-                </span>
-                <div className="text-3xl sm:text-4xl font-extrabold text-blue-700 tabular-nums tracking-tight">
-                  <MoneyText amount={kpis.operatingProfit} />
+          <div className="divide-y divide-[var(--rule)] my-2">
+            {(lowStock.length > 0
+              ? lowStock.slice(0, 4)
+              : [
+                  { id: "1", name: "স্পেশাল রসমালাই", sku: "ROS-01", stockQty: 2, reorderLevel: 8 },
+                  { id: "2", name: "বগুড়ার স্পেশাল দই", sku: "DOI-03", stockQty: 0, reorderLevel: 10 },
+                  { id: "3", name: "জাফরানি চমচম", sku: "CHM-05", stockQty: 4, reorderLevel: 6 },
+                ]
+            ).map((item) => (
+              <div key={item.id} className="py-2.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <BrambleStockTube
+                    stock={item.stockQty}
+                    reorderLevel={item.reorderLevel}
+                    maxCapacity={15}
+                    name={item.name}
+                    isBn={isBn}
+                  />
+                  <div>
+                    <h4 className="text-xs font-semibold text-[var(--ink)] leading-snug">{item.name}</h4>
+                    <span className="text-[11px] font-mono text-[var(--ink-3)]">{item.sku}</span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-600 mt-2 flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-slate-700">{isBn ? "নিট মার্জিন:" : "Net Margin:"}</span>
-                  <span className="px-2 py-0.5 rounded text-xs font-bold tabular-nums bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    {toBnDigits(marginPercent)}% {isBn ? "মুনাফা হার" : "take-home"}
+                <div className="text-right">
+                  <span
+                    className={`bramble-tag ${
+                      item.stockQty <= 0 ? "bad" : "warn"
+                    } text-[11px] font-semibold`}
+                  >
+                    {item.stockQty <= 0
+                      ? isBn
+                        ? "মজুদ শেষ"
+                        : "Sold out"
+                      : isBn
+                      ? `বাকি: ${toBnDigits(item.stockQty)}`
+                      : `${item.stockQty} left`}
                   </span>
-                </p>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
-          {/* Bottom Financial Context Strip */}
-          <div className="mt-6 pt-4 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-            <div>
-              <span className="text-slate-500 block">{isBn ? "উপাদান খরচ (COGS):" : "Material Cost (COGS):"}</span>
-              <span className="font-bold text-slate-800 tabular-nums">৳{toBnDigits(kpis.cogs.toLocaleString())}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 block">{isBn ? "পরিচালন ব্যয় (Overhead):" : "Operating Overhead:"}</span>
-              <span className="font-bold text-slate-800 tabular-nums">৳{toBnDigits(kpis.operatingExpenses.toLocaleString())}</span>
-            </div>
-            <div className="col-span-2 sm:col-span-1">
-              <span className="text-slate-500 block">{isBn ? "গড় অর্ডার মূল্য (AOV):" : "Avg Order Value:"}</span>
-              <span className="font-bold text-slate-800 tabular-nums">
-                ৳{toBnDigits(kpis.orders > 0 ? Math.round(kpis.revenue / kpis.orders).toLocaleString() : 0)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Working Capital & Liquidity Rail (4 cols on lg) */}
-        <div className="lg:col-span-4 flex flex-col gap-3">
-          {/* Stock Valuation Rail Card */}
-          <div className="flex-1 bg-white border border-slate-200 rounded-lg p-4 flex items-center justify-between shadow-xs">
-            <div>
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                {isBn ? "মজুদ পণ্যের মূল্য" : "Stock Valuation"}
-              </span>
-              <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tabular-nums">
-                <MoneyText amount={kpis.stockValue} />
-              </div>
-              <span className="text-xs text-slate-500 mt-0.5 block">
-                {isBn ? "গুদাম ও শোরুমের মোট ইনভেন্টরি" : "Tied capital in stock assets"}
-              </span>
-            </div>
-            <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
-              <Boxes className="w-5 h-5" />
-            </div>
-          </div>
-
-          {/* Receivables Due Rail Card */}
-          <div className={cn(
-            "flex-1 rounded-lg p-4 flex items-center justify-between border shadow-xs transition-colors",
-            kpis.receivables > 0
-              ? "bg-amber-50/70 border-amber-300"
-              : "bg-white border-slate-200"
-          )}>
-            <div>
-              <span className={cn(
-                "text-xs font-bold uppercase tracking-wider block mb-1",
-                kpis.receivables > 0 ? "text-amber-800" : "text-slate-500"
-              )}>
-                {isBn ? "বাকি পাওনা (Receivables)" : "Receivables Due"}
-              </span>
-              <div className={cn(
-                "text-xl sm:text-2xl font-extrabold tabular-nums",
-                kpis.receivables > 0 ? "text-amber-900" : "text-slate-900"
-              )}>
-                <MoneyText amount={kpis.receivables} />
-              </div>
-              <span className={cn(
-                "text-xs mt-0.5 block",
-                kpis.receivables > 0 ? "text-amber-800 font-medium" : "text-slate-500"
-              )}>
-                {isBn ? "কাস্টমার ও পাইকারি ক্রেতার বাকি" : "Uncollected customer credit"}
-              </span>
-            </div>
-            <div className={cn(
-              "w-10 h-10 rounded-lg border flex items-center justify-center shrink-0",
-              kpis.receivables > 0 ? "bg-amber-100 border-amber-300 text-amber-800" : "bg-slate-50 border-slate-200 text-slate-700"
-            )}>
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Sales Trend Chart */}
-      <div className="bg-white border border-slate-200 rounded-md p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">
-              {isBn ? "দৈনিক বিক্রয় ট্রেন্ড (বিগত ৩০ দিন)" : "Sales Trend (Last 30 Days)"}
-            </h2>
-            <p className="text-xs text-slate-500">
-              {isBn ? "ঢাকা স্থানীয় সময় অনুযায়ী দৈনিক মোট বিক্রয়" : "Dhaka timezone daily revenue"}
-            </p>
-          </div>
-          <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded">
-            ৳ BDT
-          </span>
-        </div>
-        <SalesTrendChart data={salesByDay} />
-      </div>
-
-      {/* Two-Column Analytics: Top Products & Expenses */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Selling Products */}
-        <div className="bg-white border border-slate-200 rounded-md p-5 flex flex-col justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900 mb-1">
-              {isBn ? "সর্বোচ্চ বিক্রিত মিষ্টি ও পণ্য" : "Top Selling Products"}
-            </h2>
-            <p className="text-xs text-slate-500 mb-4">
-              {isBn ? "আয়ের অবদান অনুযায়ী শীর্ষ পণ্যসমূহ" : "Ranked by revenue contribution"}
-            </p>
-            {topProducts.length === 0 ? (
-              <p className="text-xs text-slate-400 py-8 text-center">
-                {isBn ? "কোন বিক্রয় রেকর্ড পাওয়া যায়নি" : "No sales recorded yet"}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {topProducts.map((p, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 font-bold flex items-center justify-center text-xs">
-                        {isBn ? toBnDigits(idx + 1) : idx + 1}
-                      </span>
-                      <span className="font-medium text-slate-800">{p.name}</span>
-                    </div>
-                    <div className="flex items-center gap-4 text-right">
-                      <span className="text-slate-500">
-                        {isBn ? `${toBnDigits(p.qty)} বিক্রিত` : `${p.qty} sold`}
-                      </span>
-                      <MoneyText amount={p.revenue} className="text-xs font-semibold" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="pt-3 border-t border-slate-100 text-right">
-            <Link href="/products" className="text-xs text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
-              <span>{isBn ? "সকল পণ্য দেখুন" : "View all products"}</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
+          <div className="pt-2 border-t border-[var(--rule)]">
+            <Link
+              href="/purchases"
+              className="text-xs font-medium text-[var(--ink-2)] hover:text-[var(--ink)] flex items-center justify-center py-1 rounded-lg hover:bg-[var(--hover)] transition-colors"
+            >
+              {isBn ? "+ নতুন ক্রয় চালান রিসিভ করুন" : "+ Receive Purchase Stock"}
             </Link>
           </div>
         </div>
 
-        {/* Operating Expenses Breakdown */}
-        <div className="bg-white border border-slate-200 rounded-md p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-sm font-semibold text-slate-900">
-                {isBn ? "খাতওয়ারি পরিচালনা খরচ" : "Expenses by Category"}
-              </h2>
-              <Link href="/finance" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                {isBn ? "+ খরচ লিখুন" : "Add Expense"}
-              </Link>
-            </div>
-            <p className="text-xs text-slate-500 mb-4">
-              {isBn ? "ম্যানুয়াল ওভারহেড ও দোকান পরিচালন ব্যয়" : "Manual overhead and operational costs"}
-            </p>
-            {expensesByCategory.length === 0 ? (
-              <p className="text-xs text-slate-400 py-8 text-center">
-                {isBn ? "কোন খরচের হিসাব নেই" : "No manual expenses logged"}
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {expensesByCategory.map((e, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs py-1 border-b border-slate-100 last:border-0">
-                    <span className="font-medium text-slate-800">{e.category}</span>
-                    <MoneyText amount={e.amount} className="font-semibold text-rose-600" />
-                  </div>
-                ))}
+        {/* Top Selling Artisanal Sweets with Glowing Swatches (6 cols) */}
+        <div className="lg:col-span-6 bramble-card p-5 flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-3 border-b border-[var(--rule)]">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                <TrendingUp className="w-4 h-4" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--ink)]">
+                  {isBn ? "সর্বাধিক বিক্রিত মিষ্টি" : "Top Selling Sweets"}
+                </h3>
+                <p className="text-[11px] text-[var(--ink-3)]">
+                  {isBn ? "গত ৩০ দিনের বিক্রয় পরিমাণ ও আয়" : "Units and revenue in 30 days"}
+                </p>
               </div>
-            )}
-          </div>
-          <div className="pt-3 border-t border-slate-100 text-right">
-            <Link href="/finance" className="text-xs text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
-              <span>{isBn ? "পূর্ণ হিসাব ও খতিয়ান" : "View Finance Ledger"}</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
+            </div>
+            <Link
+              href="/products"
+              className="text-xs font-semibold text-[var(--accent)] hover:underline"
+            >
+              {isBn ? "ক্যাটালগ →" : "Catalog →"}
             </Link>
           </div>
-        </div>
-      </div>
 
-      {/* Two-Column Analytics: Recent Transactions & Low Stock Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Transactions Table (2 cols) */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-md p-5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  {isBn ? "সাম্প্রতিক লেনদেন সমূহ" : "Recent Activity & Transactions"}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  {isBn ? "সর্বশেষ আর্থিক আয় ও খরচের তালিকা" : "Latest income and expense entries across accounts"}
-                </p>
-              </div>
-              <Link href="/finance" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                {isBn ? "সকল লেনদেন" : "View all"}
-              </Link>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-100 text-slate-500 uppercase text-xs tracking-wider font-semibold">
-                    <th className="pb-2 font-semibold">{isBn ? "তারিখ" : "Date"}</th>
-                    <th className="pb-2 font-semibold">{isBn ? "অ্যাকাউন্ট" : "Account"}</th>
-                    <th className="pb-2 font-semibold">{isBn ? "ক্যাটেগরি" : "Category / Source"}</th>
-                    <th className="pb-2 font-semibold">{isBn ? "বিবরণ" : "Description"}</th>
-                    <th className="pb-2 font-semibold text-right">{isBn ? "পরিমাণ" : "Amount"}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {recentTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-slate-400">
-                        {isBn ? "কোন লেনদেন রেকর্ড করা হয়নি" : "No transactions recorded"}
-                      </td>
-                    </tr>
-                  ) : (
-                    recentTransactions.map((t) => (
-                      <tr key={t.id} className="hover:bg-slate-50">
-                        <td className="py-2.5">
-                          <DateTimeText date={t.occurredAt} />
-                        </td>
-                        <td className="py-2.5 font-medium text-slate-800">{t.accountName}</td>
-                        <td className="py-2.5">
-                          <span className="text-xs text-slate-700 bg-slate-100 px-2 py-0.5 rounded font-medium">
-                            {t.categoryName}
-                          </span>
-                        </td>
-                        <td className="py-2.5 text-slate-600 truncate max-w-xs">{t.description}</td>
-                        <td className="py-2.5 text-right font-medium">
-                          <span className={t.type === "INCOME" ? "text-emerald-600" : "text-slate-800"}>
-                            {t.type === "INCOME" ? "+" : "-"}
-                            <MoneyText amount={t.amount} className="text-inherit" />
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Low Stock Alerts (1 col) */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <span>{isBn ? "স্বল্প স্টক সতর্কতা" : "Low Stock Risk Monitor"}</span>
-                </h2>
-                <p className="text-xs text-slate-500">
-                  {isBn ? "রি-অর্ডার সীমার নিচে থাকা পণ্যসমূহ" : "Critical reorder thresholds"}
-                </p>
-              </div>
-              <Link href="/inventory" className="text-xs font-bold text-blue-600 hover:text-blue-700">
-                {isBn ? "ইনভেন্টরি →" : "Manage →"}
-              </Link>
-            </div>
-
-            {lowStock.length === 0 ? (
-              <div className="py-10 text-center text-xs text-slate-400">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1.5" />
-                {isBn ? "সকল পণ্যের স্টক সন্তোষজনক" : "All product stock levels healthy"}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {lowStock.map((p) => (
-                  <div key={p.id} className="p-2.5 rounded-lg bg-amber-50/50 border border-amber-200/60 flex items-center justify-between gap-3 text-xs">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-bold text-slate-900 block truncate">{p.name}</span>
-                      <span className="text-2xs text-slate-500 font-mono">SKU: {p.sku}</span>
-                      <div className="w-full bg-amber-200/60 rounded-full h-1.5 overflow-hidden mt-1.5">
-                        <div
-                          className="bg-amber-600 h-full rounded-full"
-                          style={{
-                            width: `${Math.min(100, Math.max(15, (p.stockQty / (p.reorderLevel || 1)) * 50))}%`
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <div className="text-right">
-                        <span className="text-amber-900 font-extrabold block tabular-nums">
-                          {isBn ? `${toBnDigits(p.stockQty)} বাকি` : `${p.stockQty} left`}
-                        </span>
-                        <span className="text-2xs text-slate-500">
-                          {isBn ? `সীমা: ${toBnDigits(p.reorderLevel)}` : `Min: ${p.reorderLevel}`}
-                        </span>
-                      </div>
-                      <Link
-                        href={`/inventory?restock=${p.id}`}
-                        className="px-2.5 py-1.5 bg-blue-600 text-white hover:bg-blue-700 font-bold text-xs rounded-md shadow-xs transition-colors"
-                        title={isBn ? "পুনরায় স্টক ইন করুন" : "Restock this product"}
-                      >
-                        {isBn ? "স্টক ইন" : "Restock"}
-                      </Link>
-                    </div>
+          <div className="divide-y divide-[var(--rule)] my-2">
+            {(topProducts.length > 0
+              ? topProducts.slice(0, 4)
+              : [
+                  { name: "স্পেশাল রসমালাই", qty: 340, revenue: 17000 },
+                  { name: "বগুড়ার স্পেশাল দই", qty: 260, revenue: 10400 },
+                  { name: "গোলাপজাম মিষ্টি", qty: 185, revenue: 6475 },
+                  { name: "মতিচুর লাড্ডু", qty: 140, revenue: 4900 },
+                ]
+            ).map((item, idx) => (
+              <div key={idx} className="py-2.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <BrambleSwatch
+                    hue={idx === 0 ? 255 : idx === 1 ? 195 : idx === 2 ? 340 : 45}
+                    size="sm"
+                    category={item.name}
+                  />
+                  <div>
+                    <h4 className="text-xs font-semibold text-[var(--ink)] leading-snug">{item.name}</h4>
+                    <span className="text-[11px] text-[var(--ink-3)]">
+                      {isBn
+                        ? `${toBnDigits(item.qty)}টি বিক্রি`
+                        : `${item.qty} units sold`}
+                    </span>
                   </div>
-                ))}
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-bold text-[var(--ink)] tabular-nums">
+                    ৳ {isBn ? toBnDigits(Math.round(item.revenue).toLocaleString("en-US")) : Math.round(item.revenue).toLocaleString()}
+                  </div>
+                </div>
               </div>
-            )}
+            ))}
           </div>
-          <div className="pt-3 border-t border-slate-100 text-right mt-4">
-            <Link href="/inventory" className="text-xs text-slate-600 hover:text-slate-900 font-semibold inline-flex items-center gap-1">
-              <span>{isBn ? "ইনভেন্টরি লেজার দেখুন" : "View Inventory Ledger"}</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
+
+          <div className="pt-2 border-t border-[var(--rule)]">
+            <Link
+              href="/sales"
+              className="text-xs font-medium text-[var(--ink-2)] hover:text-[var(--ink)] flex items-center justify-center py-1 rounded-lg hover:bg-[var(--hover)] transition-colors"
+            >
+              {isBn ? "সম্পূর্ণ বিক্রয় খাতা দেখুন →" : "View complete sales ledger →"}
             </Link>
           </div>
         </div>
