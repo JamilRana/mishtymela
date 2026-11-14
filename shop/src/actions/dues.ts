@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { handleAction } from "@/lib/action-handler";
+import { assertPostingAllowed } from "@/modules/treasury/guard";
 import { Decimal } from "@prisma/client/runtime/library";
 
 const D = (n: number | string | Decimal) => new Decimal(n);
@@ -163,16 +164,10 @@ export async function collectCustomerDueAction(rawData: z.infer<typeof CollectCu
     const session = await requireRole(["OWNER", "ADMIN", "MANAGER", "CASHIER"]);
     const orgId = session.organizationId;
     const validated = CollectCustomerDueSchema.parse(rawData);
+    const paymentDate = new Date(validated.date);
 
     // Guard books closed cutoff
-    const org = await prisma.organization.findUniqueOrThrow({
-      where: { id: orgId },
-      select: { booksClosedThrough: true },
-    });
-    const paymentDate = new Date(validated.date);
-    if (org.booksClosedThrough && paymentDate <= org.booksClosedThrough) {
-      throw new Error("Cannot record collection on or before closed books cutoff date.");
-    }
+    await assertPostingAllowed(prisma as any, orgId, paymentDate);
 
     const customer = await prisma.contact.findFirst({
       where: { id: validated.customerId, organizationId: orgId, type: "CUSTOMER", active: true },
@@ -252,16 +247,10 @@ export async function paySupplierDueAction(rawData: z.infer<typeof PaySupplierDu
     const session = await requireRole(["OWNER", "ADMIN", "MANAGER"]);
     const orgId = session.organizationId;
     const validated = PaySupplierDueSchema.parse(rawData);
+    const paymentDate = new Date(validated.date);
 
     // Guard books closed cutoff
-    const org = await prisma.organization.findUniqueOrThrow({
-      where: { id: orgId },
-      select: { booksClosedThrough: true },
-    });
-    const paymentDate = new Date(validated.date);
-    if (org.booksClosedThrough && paymentDate <= org.booksClosedThrough) {
-      throw new Error("Cannot record payment on or before closed books cutoff date.");
-    }
+    await assertPostingAllowed(prisma as any, orgId, paymentDate);
 
     const supplier = await prisma.contact.findFirst({
       where: { id: validated.supplierId, organizationId: orgId, type: "SUPPLIER", active: true },
